@@ -37,6 +37,64 @@ def darker(r, g, b, a):
 def days_of_month(year, month):
     return calendar.monthrange(year, month)[1]
 
+def qdate(d):
+    return None if d is None else QDate(d.year, d.month, d.day)
+
+def pydate(qd):
+    return None if qd is None else datetime.date(qd.year(), qd.month(), qd.day())
+
+def easter_sunday(year):
+    g = year % 19
+    c = year / 100
+    h = (c - (c / 4) - ((9 * c + 13) / 25) + 19 * g + 15) % 30
+    i = h - (h / 28) * (1 - (h / 28) * (29 / (h + 1)) * ((21 - g) / 11))
+    day = i - ((year + (year / 4) + i + 2 - c + (c / 4)) % 7) + 28
+    month = 3
+    if day > 31:
+        return QDate(year, month + 1, day - 31)
+    else:
+        return QDate(year, month, day)
+
+HOLIDAY_NONE = 0
+HOLIDAY_NEWYEAR = 1
+HOLIDAY_GOOD_FRIDAY = 2
+HOLIDAY_EASTER_MONDAY = 4
+HOLIDAY_MAY_1 = 8
+HOLIDAY_ASCENSION = 16
+HOLIDAY_PENTECOST = 32
+HOLIDAY_TAG_DER_DEUTSCHEN_EINHEIT = 64
+HOLIDAY_CHRISTMAS = 128
+HOLIDAY_WEEKEND = 256
+
+def holiday(date):
+    holiday = HOLIDAY_NONE
+
+    easter = easter_sunday(date.year)
+    date = qdate(date)
+
+    if date.dayOfWeek() in (6, 7):
+        holiday |= HOLIDAY_WEEKEND
+
+    if date.addDays(2) == easter:
+        holiday |= HOLIDAY_GOOD_FRIDAY
+    elif date.addDays(-1) == easter:
+        holiday |= HOLIDAY_EASTER_MONDAY
+    elif date.addDays(-39) == easter:
+        holiday |= HOLIDAY_ASCENSION
+    elif date.addDays(-49) == easter:
+        holiday |= HOLIDAY_PENTECOST
+
+    if date.dayOfYear() == 1:
+        holiday |= HOLIDAY_NEWYEAR
+    elif date.month() == 5 and date.day() == 1:
+        holiday |= HOLIDAY_MAY_1
+    elif date.month() == 10 and date.day() == 3:
+        holiday |= HOLIDAY_TAG_DER_DEUTSCHEN_EINHEIT
+    elif date.month() == 12 and date.day() in (25, 26):
+        holiday |= HOLIDAY_CHRISTMAS
+
+    return holiday
+
 class CalendarStrip(QWidget):
     def __init__(self, parent=None):
         super(CalendarStrip, self).__init__(parent)
@@ -278,6 +336,8 @@ class CalendarBody(CalendarStrip):
                 self.width(), (15 + 25 + 15) * i + 15 + 25)
 
         for x, date in self.visibleDays():
+            rect = QRect(x, 0, self.columnWidth(), self.height())
+
             if date.day == 1:
                 painter.setPen(QPen())
             else:
@@ -285,8 +345,11 @@ class CalendarBody(CalendarStrip):
 
             painter.drawLine(x, 0, x, self.height())
 
+            if holiday(date):
+                painter.fillRect(rect, QBrush(QColor(250, 220, 200, 100)))
+
             if date < datetime.date.today():
-                painter.fillRect(QRect(x, 0, self.columnWidth(), self.height()), QBrush(Qt.Dense7Pattern))
+                painter.fillRect(rect, QBrush(Qt.Dense7Pattern))
 
         painter.setPen(QPen())
 
