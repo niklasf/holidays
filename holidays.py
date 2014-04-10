@@ -289,7 +289,7 @@ class CalendarPane(QScrollArea):
     def onLeftClicked(self, year, month):
         self.flag = False
 
-        self.offset -= days_of_month(year - 1 if month == 1 else 0, 12 if month == 1 else month - 1)
+        self.offset -= days_of_month(year - 1 if month == 1 else year, 12 if month == 1 else month - 1)
 
         self.animation.setStartValue(self.header.offset())
         self.animation.setEndValue(float(self.offset))
