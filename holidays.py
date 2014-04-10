@@ -63,9 +63,6 @@ class CalendarStrip(QWidget):
     def currentDate(self):
         return datetime.date.fromordinal(int(self._offset) + EPOCH_ORDINAL)
 
-    def sizeHint(self):
-        return QSize(40 * 20, 80)
-
 class CalendarHeader(CalendarStrip):
 
     leftClicked = Signal(int, int)
@@ -77,6 +74,7 @@ class CalendarHeader(CalendarStrip):
     def __init__(self, parent=None):
         super(CalendarHeader, self).__init__(parent)
         self.setMouseTracking(True)
+        self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
 
         # Button state info.
         self.mousePos = None
@@ -183,6 +181,7 @@ class CalendarHeader(CalendarStrip):
         for xStart, date in self.visibleDays():
             xEnd = xStart + self.columnWidth()
 
+            # Draw weak headers.
             if date.weekday() == 0:
                 week = date.timetuple().tm_yday / 7 + 1
                 if datetime.date(date.year, 1, 1).weekday() != 0:
@@ -195,6 +194,7 @@ class CalendarHeader(CalendarStrip):
                 self.style().drawControl(QStyle.CE_Header, opt, painter, self)
                 painter.restore()
 
+            # Draw month headers.
             if date.day == 1:
                 daysOfMonth = calendar.monthrange(date.year, date.month)
                 opt.rect = QRect(xStart, 0, self.columnWidth() * daysOfMonth[1], 40)
@@ -213,6 +213,7 @@ class CalendarHeader(CalendarStrip):
                     Qt.AlignVCenter, "%s %d" % (MONTH_NAMES[date.month], date.year))
                 painter.restore()
 
+            # Draw day headers.
             opt.rect = QRect(xStart, 60, self.columnWidth(), 20)
             opt.text = str(date.day)
             painter.save()
@@ -255,6 +256,29 @@ class CalendarHeader(CalendarStrip):
 
         painter.end()
 
+    def sizeHint(self):
+        return QSize(40 * 25, 80)
+
+class CalendarBody(CalendarStrip):
+    def __init__(self, parent=None):
+        super(CalendarBody, self).__init__(parent)
+
+    def paintEvent(self, event):
+        painter = QPainter(self)
+        painter.fillRect(self.rect(), QBrush(QColor(255, 255, 255)))
+
+        for x, date in self.visibleDays():
+            if date.day == 1:
+                painter.setPen(QPen())
+            else:
+                painter.setPen(QPen(QColor(200, 200, 200)))
+
+            painter.drawLine(x, 0, x, self.height())
+
+        painter.end()
+
+    def sizeHint(self):
+        return QSize(40 * 25, 1000)
 
 class VariantAnimation(QVariantAnimation):
     def updateCurrentValue(self, value):
@@ -265,18 +289,18 @@ class CalendarPane(QScrollArea):
         super(CalendarPane, self).__init__(parent)
         self.setViewportMargins(0, 80, 0, 0)
         self.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
-        self.setWidgetResizable(True)
+
+        today = datetime.date.today()
+        self.offset = datetime.date(today.year, today.month, 1).toordinal() - EPOCH_ORDINAL
 
         self.header = CalendarHeader(self)
         self.header.leftClicked.connect(self.onLeftClicked)
         self.header.todayClicked.connect(self.onTodayClicked)
         self.header.rightClicked.connect(self.onRightClicked)
-
-        self.setWidget(FancyWidget(Qt.DiagCrossPattern, QSize(1000, 500), self))
-
-        today = datetime.date.today()
-        self.offset = datetime.date(today.year, today.month, 1).toordinal() - EPOCH_ORDINAL
         self.header.setOffset(self.offset)
+
+        self.setWidget(CalendarBody(self))
+        self.widget().setOffset(self.offset)
 
         self.animation = VariantAnimation(self)
         self.animation.setEasingCurve(QEasingCurve(QEasingCurve.InOutQuad))
@@ -321,7 +345,8 @@ class CalendarPane(QScrollArea):
         self.animationEnabled = True
 
     def resizeEvent(self, event):
-        self.header.resize(self.width(), 80)
+        self.header.resize(self.width(), self.header.sizeHint().height())
+        self.widget().resize(self.width(), max(self.widget().sizeHint().height(), self.height()))
 
     def onAnimate(self, value):
         if not self.animationEnabled:
@@ -329,6 +354,9 @@ class CalendarPane(QScrollArea):
 
         self.widget().setOffset(value)
         self.header.setOffset(value)
+        self.widget().setOffset(value)
+
+        self.widget().repaint()
         self.header.repaint()
 
     def eventFilter(self, watched, event):
@@ -355,30 +383,6 @@ class CalendarPane(QScrollArea):
         self.animationEnabled = True
 
         return super(CalendarPane, self).eventFilter(watched, event)
-
-class FancyWidget(QWidget):
-    def __init__(self, style, size, parent=None):
-        super(FancyWidget, self).__init__(parent)
-        self.style = style
-        self.dim = size
-
-        self._offset = 0.0
-
-    def setOffset(self, offset):
-        self._offset = offset
-        self.repaint()
-
-    def offset(self):
-        return self._offset
-
-    def paintEvent(self, event):
-        painter = QPainter(self)
-        painter.fillRect(self.rect(), QBrush(QColor(255, 255, 255)))
-        painter.end()
-
-    def sizeHint(self):
-        return self.dim
-
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
