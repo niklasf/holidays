@@ -250,6 +250,14 @@ class CalendarPane(QScrollArea):
         self.animation.start()
         self.flag = True
 
+    def onTodayClicked(self):
+        print "trigerred"
+        self.flag = False
+        self.animation.setStartValue(self.widget().offset())
+        self.animation.setEndValue(float(datetime.date.today().toordinal() - EPOCH_ORDINAL))
+        self.animation.start()
+        self.flag = True
+
     def resizeEvent(self, event):
         self.header.resize(self.width(), 80)
 
@@ -273,6 +281,8 @@ class CalendarPane(QScrollArea):
                 self.animation.setStartValue(self.widget().offset())
                 self.animation.setEndValue(self.widget().offset() - 30)
                 self.animation.start()
+            elif event.key() == Qt.Key_Return:
+                self.onTodayClicked()
         self.flag = True
 
         return super(CalendarPane, self).eventFilter(watched, event)
