@@ -58,7 +58,7 @@ class CalendarStrip(QWidget):
 
         for day in xrange(start, end):
             x = (day - self._offset) * self.columnWidth()
-            yield x, datetime.date.fromordinal(day + EPOCH_ORDINAL)
+            yield x, datetime.date.fromordinal(day + EPOCH_ORDINAL - 5)
 
     def sizeHint(self):
         return QSize(40 * 20, 80)
@@ -180,9 +180,14 @@ class CalendarHeader(CalendarStrip):
         for xStart, date in self.visibleDays():
             xEnd = xStart + self.columnWidth()
 
-            if date.toordinal() % 7 == 4:
+            if date.weekday() == 0:
+                week = date.timetuple().tm_yday / 7 + 1
+                if datetime.date(date.year, 1, 1).weekday() != 0:
+                    week += 1
+
                 opt.rect = QRect(xStart, 40, self.columnWidth() * 7, 20)
-                opt.text = str("Woche %d" % (date.timetuple().tm_yday / 7 + 1))
+                opt.text = "Woche %d" % week
+
                 painter.save()
                 self.style().drawControl(QStyle.CE_Header, opt, painter, self)
                 painter.restore()
