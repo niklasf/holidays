@@ -37,11 +37,11 @@ def darker(r, g, b, a):
 class CalendarStrip(QWidget):
     def __init__(self, parent=None):
         super(CalendarStrip, self).__init__(parent)
-        
+
         self._offset = 0
 
     def columnWidth(self):
-        return min(self.width() / 30.0, 20.0)
+        return min(self.width() / 30.0, 25.0)
 
     def offset(self):
         return self._offset
@@ -64,6 +64,8 @@ class CalendarHeader(CalendarStrip):
 
     leftClicked = Signal()
 
+    todayClicked = Signal()
+
     rightClicked = Signal()
 
     def __init__(self, parent=None):
@@ -73,6 +75,7 @@ class CalendarHeader(CalendarStrip):
         # Button state info.
         self.mousePos = None
         self.leftActive = False
+        self.todayActive = False
         self.rightActive = False
 
         # Left button pixmaps.
@@ -80,7 +83,10 @@ class CalendarHeader(CalendarStrip):
         self.lighterLeftPixmap = map_pixel(self.leftPixmap, lighter)
         self.darkerLeftPixmap = map_pixel(self.leftPixmap, darker)
 
+        # Today button pixmaps.
         self.todayPixmap = QPixmap(os.path.join(os.path.dirname(__file__), "date.png"))
+        self.lighterTodayPixmap = map_pixel(self.todayPixmap, lighter)
+        self.darkerTodayPixmap = map_pixel(self.todayPixmap, darker)
 
         # Right button pixmaps.
         self.rightPixmap = QPixmap(os.path.join(os.path.dirname(__file__), "date_next.png"))
@@ -92,13 +98,20 @@ class CalendarHeader(CalendarStrip):
             if date.day == 1:
                 yield QRect(x + 32, (40 - 32) / 2, 32, 32)
 
+    def visibleTodayButtons(self):
+        for x, date in self.visibleDays():
+            if date.day == 1:
+                yield QRect(x + 32 * 2, (40 - 32) / 2, 32, 32)
+
     def visibleRightButtons(self):
         for x, date in self.visibleDays():
             if date.day == 1:
-                yield QRect(x + 96, (40 - 32) / 2, 32, 32)
+                yield QRect(x + 32 * 3, (40 - 32) / 2, 32, 32)
 
     def updateButtons(self):
         for rect in self.visibleLeftButtons():
+            self.update(rect)
+        for rect in self.visibleTodayButtons():
             self.update(rect)
         for rect in self.visibleRightButtons():
             self.update(rect)
@@ -120,6 +133,11 @@ class CalendarHeader(CalendarStrip):
                 self.leftActive = True
                 self.update(rect)
 
+        for rect in self.visibleTodayButtons():
+            if rect.contains(event.pos()):
+                self.todayActive = True
+                self.update(rect)
+
         for rect in self.visibleRightButtons():
             if rect.contains(event.pos()):
                 self.rightActive = True
@@ -134,6 +152,12 @@ class CalendarHeader(CalendarStrip):
                 self.leftClicked.emit()
                 self.update(rect)
 
+        # Trigger today clicked signal.
+        for rect in self.visibleTodayButtons():
+            if rect.contains(event.pos()):
+                self.todayClicked.emit()
+                self.update(rect)
+
         # Trigger right clicked signal.
         for rect in self.visibleRightButtons():
             if rect.contains(event.pos()):
@@ -141,17 +165,18 @@ class CalendarHeader(CalendarStrip):
                 self.update(rect)
 
         self.leftActive = False
+        self.todayActive = False
         self.rightActive = False
 
     def paintEvent(self, event):
         painter = QPainter(self)
-        
+
         opt = QStyleOptionHeader()
         opt.textAlignment = Qt.AlignCenter
-        
+
         for xStart, date in self.visibleDays():
             xEnd = xStart + self.columnWidth()
-            
+
             if date.toordinal() % 7 == 4:
                 opt.rect = QRect(xStart, 40, self.columnWidth() * 7, 20)
                 opt.text = str("Woche %d" % (date.timetuple().tm_yday / 7 + 1))
@@ -166,19 +191,17 @@ class CalendarHeader(CalendarStrip):
                 painter.save()
                 self.style().drawControl(QStyle.CE_Header, opt, painter, self)
                 painter.restore()
-                
+
                 painter.save()
                 font = self.font()
                 font.setPointSizeF(font.pointSizeF() * 1.2)
                 font.setBold(True)
                 painter.setFont(font)
-                
-                painter.drawPixmap(QRect(xStart + 64, (40 - 16) / 2, 16, 16), self.todayPixmap, QRect(0, 0, 16, 16))
-                
-                painter.drawText(QRect(xStart + 128, 0, self.columnWidth() * daysOfMonth[1] - 64 - 128, 40),
+
+                painter.drawText(QRect(xStart + 32 * 5, 0, self.columnWidth() * daysOfMonth[1] - 32 * 5, 40),
                     Qt.AlignVCenter, "%s %d" % (MONTH_NAMES[date.month], date.year))
                 painter.restore()
-            
+
             opt.rect = QRect(xStart, 60, self.columnWidth(), 20)
             opt.text = str(date.day)
             painter.save()
@@ -195,6 +218,18 @@ class CalendarHeader(CalendarStrip):
                     painter.drawPixmap(pixmapRect, self.lighterLeftPixmap, QRect(0, 0, 16, 16))
             else:
                 painter.drawPixmap(pixmapRect, self.leftPixmap, QRect(0, 0, 16, 16))
+
+        # Draw today buttons.
+        for rect in self.visibleTodayButtons():
+            pixmapRect = QRect(rect.x() + (rect.width() - 16) / 2, rect.y() + (rect.height() - 16) / 2, 16, 16)
+            if self.mousePos and rect.contains(self.mousePos):
+                if self.todayActive:
+                    painter.drawPixmap(pixmapRect, self.darkerTodayPixmap, QRect(0, 0, 16, 16))
+                else:
+                    painter.drawPixmap(pixmapRect, self.lighterTodayPixmap, QRect(0, 0, 16, 16))
+            else:
+                painter.drawPixmap(pixmapRect, self.todayPixmap, QRect(0, 0, 16, 16))
+
 
         # Draw go right buttons.
         for rect in self.visibleRightButtons():
@@ -219,13 +254,13 @@ class CalendarPane(QScrollArea):
         super(CalendarPane, self).__init__(parent)
         self.setViewportMargins(0, 80, 0, 0)
         self.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
-        
+
         self.setWidgetResizable(True)
         self.setWidget(FancyWidget(Qt.DiagCrossPattern, QSize(1000, 40), self))
-        
 
         self.header = CalendarHeader(self)
         self.header.leftClicked.connect(self.onLeftClicked)
+        self.header.todayClicked.connect(self.onTodayClicked)
         self.header.rightClicked.connect(self.onRightClicked)
 
         self.animation = VariantAnimation(self)
