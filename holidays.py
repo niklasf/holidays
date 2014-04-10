@@ -275,7 +275,8 @@ class CalendarPane(QScrollArea):
         self.setWidget(FancyWidget(Qt.DiagCrossPattern, QSize(1000, 500), self))
 
         today = datetime.date.today()
-        self.header.setOffset(datetime.date(today.year, today.month, 1).toordinal() - EPOCH_ORDINAL)
+        self.offset = datetime.date(today.year, today.month, 1).toordinal() - EPOCH_ORDINAL
+        self.header.setOffset(self.offset)
 
         self.animation = VariantAnimation(self)
         self.animation.setEasingCurve(QEasingCurve(QEasingCurve.InOutQuad))
@@ -287,27 +288,36 @@ class CalendarPane(QScrollArea):
 
     def onLeftClicked(self, year, month):
         self.flag = False
+
+        self.offset -= days_of_month(year - 1 if month == 1 else 0, 12 if month == 1 else month - 1)
+
         self.animation.setStartValue(self.header.offset())
-        self.animation.setEndValue(self.header.offset() - days_of_month(year - (1 if month == 1 else 0), 12 if month == 1 else month - 1))
+        self.animation.setEndValue(float(self.offset))
         self.animation.start()
+
         self.flag = True
 
     def onRightClicked(self, year, month):
         self.flag = False
+
+        self.offset += days_of_month(year, month)
+
         self.animation.setStartValue(self.header.offset())
-        self.animation.setEndValue(self.header.offset() + days_of_month(year, month))
+        self.animation.setEndValue(float(self.offset))
         self.animation.start()
+
         self.flag = True
 
     def onTodayClicked(self):
-        print "trigerred"
         self.flag = False
-        self.animation.setStartValue(self.header.offset())
 
         today = datetime.date.today()
-        self.animation.setEndValue(float(datetime.date(today.year, today.month, 1).toordinal() - EPOCH_ORDINAL))
+        self.offset = datetime.date(today.year, today.month, 1).toordinal() - EPOCH_ORDINAL
 
+        self.animation.setStartValue(self.header.offset())
+        self.animation.setEndValue(float(self.offset))
         self.animation.start()
+
         self.flag = True
 
     def resizeEvent(self, event):
@@ -325,18 +335,19 @@ class CalendarPane(QScrollArea):
     def eventFilter(self, watched, event):
         self.flag = False
         if event.type() == QEvent.KeyPress:
-            offset = int(self.header.offset())
-            if self.header.currentDate().day != 1:
-                offset -= 1
-            date = datetime.date.fromordinal(offset + EPOCH_ORDINAL)
+            date = datetime.date.fromordinal(self.offset + EPOCH_ORDINAL)
 
             if event.key() == Qt.Key_Right:
+                self.offset += days_of_month(date.year, date.month)
+
                 self.animation.setStartValue(self.header.offset())
-                self.animation.setEndValue(self.header.offset() + days_of_month(date.year, date.month))
+                self.animation.setEndValue(float(self.offset))
                 self.animation.start()
             elif event.key() == Qt.Key_Left:
+                self.offset -= days_of_month(date.year - 1 if date.month == 1 else date.year, 12 if date.month == 1 else date.month - 1)
+
                 self.animation.setStartValue(self.header.offset())
-                self.animation.setEndValue(self.header.offset() - days_of_month(date.year - (1 if date.month == 1 else 0), 12 if date.month == 1 else date.month - 1))
+                self.animation.setEndValue(float(self.offset))
                 self.animation.start()
             elif event.key() == Qt.Key_Return:
                 self.onTodayClicked()
