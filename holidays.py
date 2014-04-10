@@ -31,7 +31,7 @@ def lighter(r, g, b, a):
     return color.red(), color.green(), color.blue(), color.alpha()
 
 def darker(r, g, b, a):
-    color = QColor(r, g, b, a).darker()
+    color = QColor(r, g, b, a).lighter(90)
     return color.red(), color.green(), color.blue(), color.alpha()
 
 class CalendarStrip(QWidget):
@@ -64,6 +64,8 @@ class CalendarHeader(CalendarStrip):
 
     leftClicked = Signal()
 
+    rightClicked = Signal()
+
     def __init__(self, parent=None):
         super(CalendarHeader, self).__init__(parent)
         
@@ -72,30 +74,41 @@ class CalendarHeader(CalendarStrip):
         self.mousePos = None
 
         self.leftActive = False
+        self.rightActive = False
 
         self.leftPixmap = QPixmap(os.path.join(os.path.dirname(__file__), "date_previous.png"))
         self.lighterLeftPixmap = map_pixel(self.leftPixmap, lighter)
         self.darkerLeftPixmap = map_pixel(self.leftPixmap, darker)
 
         self.todayPixmap = QPixmap(os.path.join(os.path.dirname(__file__), "date.png"))
+
         self.rightPixmap = QPixmap(os.path.join(os.path.dirname(__file__), "date_next.png"))
+        self.lighterRightPixmap = map_pixel(self.rightPixmap, lighter)
+        self.darkerRightPixmap = map_pixel(self.rightPixmap, darker)
 
     def visibleLeftButtons(self):
         for x, date in self.visibleDays():
             if date.day == 1:
                 yield QRect(x + 32, (40 - 32) / 2, 32, 32)
 
-    def leaveEvent(self, event):
-        self.mousePos = None
+    def visibleRightButtons(self):
+        for x, date in self.visibleDays():
+            if date.day == 1:
+                yield QRect(x + 96, (40 - 32) / 2, 32, 32)
 
+    def updateButtons(self):
         for rect in self.visibleLeftButtons():
             self.update(rect)
+        for rect in self.visibleRightButtons():
+            self.update(rect)
+
+    def leaveEvent(self, event):
+        self.mousePos = None
+        self.updateButtons()
 
     def mouseMoveEvent(self, event):
         self.mousePos = event.pos()
-
-        for rect in self.visibleLeftButtons():
-            self.update(rect)
+        self.updateButtons()
 
     def mousePressEvent(self, event):
         self.mousePos = event.pos()
@@ -104,6 +117,11 @@ class CalendarHeader(CalendarStrip):
         for rect in self.visibleLeftButtons():
             if rect.contains(event.pos()):
                 self.leftActive = True
+                self.update(rect)
+
+        for rect in self.visibleRightButtons():
+            if rect.contains(event.pos()):
+                self.rightActive = True
                 self.update(rect)
 
     def mouseReleaseEvent(self, event):
@@ -115,7 +133,14 @@ class CalendarHeader(CalendarStrip):
                 self.leftClicked.emit()
                 self.update(rect)
 
+        for rect in self.visibleRightButtons():
+            if rect.contains(event.pos()):
+                print "Right clicked!"
+                self.rightClicked.emit()
+                self.update(rect)
+
         self.leftActive = False
+        self.rightActive = False
 
     def paintEvent(self, event):
         painter = QPainter(self)
@@ -149,8 +174,6 @@ class CalendarHeader(CalendarStrip):
                 
                 painter.drawPixmap(QRect(xStart + 64, (40 - 16) / 2, 16, 16), self.todayPixmap, QRect(0, 0, 16, 16))
                 
-                painter.drawPixmap(QRect(xStart + 96, (40 - 16) / 2, 16, 16), self.rightPixmap, QRect(0, 0, 16, 16))
-                
                 painter.drawText(QRect(xStart + 128, 0, self.columnWidth() * daysOfMonth[1] - 64 - 128, 40),
                     Qt.AlignVCenter, "%s %d" % (MONTH_NAMES[date.month], date.year))
                 painter.restore()
@@ -171,6 +194,17 @@ class CalendarHeader(CalendarStrip):
                     painter.drawPixmap(pixmapRect, self.lighterLeftPixmap, QRect(0, 0, 16, 16))
             else:
                 painter.drawPixmap(pixmapRect, self.leftPixmap, QRect(0, 0, 16, 16))
+
+        # Draw go right buttons.
+        for rect in self.visibleRightButtons():
+            pixmapRect = QRect(rect.x() + (rect.width() - 16) / 2, rect.y() + (rect.height() - 16) / 2, 16, 16)
+            if self.mousePos and rect.contains(self.mousePos):
+                if self.rightActive:
+                    painter.drawPixmap(pixmapRect, self.darkerRightPixmap, QRect(0, 0, 16, 16))
+                else:
+                    painter.drawPixmap(pixmapRect, self.lighterRightPixmap, QRect(0, 0, 16, 16))
+            else:
+                painter.drawPixmap(pixmapRect, self.rightPixmap, QRect(0, 0, 16, 16))
 
         painter.end()
 
