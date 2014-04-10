@@ -284,10 +284,10 @@ class CalendarPane(QScrollArea):
         self.animation.setDuration(1000)
         self.installEventFilter(self)
 
-        self.flag = False
+        self.animationEnabled = False
 
     def onLeftClicked(self, year, month):
-        self.flag = False
+        self.animationEnabled = False
 
         self.offset -= days_of_month(year - 1 if month == 1 else year, 12 if month == 1 else month - 1)
 
@@ -295,10 +295,10 @@ class CalendarPane(QScrollArea):
         self.animation.setEndValue(float(self.offset))
         self.animation.start()
 
-        self.flag = True
+        self.animationEnabled = True
 
     def onRightClicked(self, year, month):
-        self.flag = False
+        self.animationEnabled = False
 
         self.offset += days_of_month(year, month)
 
@@ -306,10 +306,10 @@ class CalendarPane(QScrollArea):
         self.animation.setEndValue(float(self.offset))
         self.animation.start()
 
-        self.flag = True
+        self.animationEnabled = True
 
     def onTodayClicked(self):
-        self.flag = False
+        self.animationEnabled = False
 
         today = datetime.date.today()
         self.offset = datetime.date(today.year, today.month, 1).toordinal() - EPOCH_ORDINAL
@@ -318,22 +318,22 @@ class CalendarPane(QScrollArea):
         self.animation.setEndValue(float(self.offset))
         self.animation.start()
 
-        self.flag = True
+        self.animationEnabled = True
 
     def resizeEvent(self, event):
         self.header.resize(self.width(), 80)
 
     def onAnimate(self, value):
-        if not self.flag:
-            print "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
+        if not self.animationEnabled:
             return
-        print value
+
         self.widget().setOffset(value)
         self.header.setOffset(value)
         self.header.repaint()
 
     def eventFilter(self, watched, event):
-        self.flag = False
+        self.animationEnabled = False
+
         if event.type() == QEvent.KeyPress:
             date = datetime.date.fromordinal(self.offset + EPOCH_ORDINAL)
 
@@ -351,7 +351,8 @@ class CalendarPane(QScrollArea):
                 self.animation.start()
             elif event.key() == Qt.Key_Return:
                 self.onTodayClicked()
-        self.flag = True
+
+        self.animationEnabled = True
 
         return super(CalendarPane, self).eventFilter(watched, event)
 
