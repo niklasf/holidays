@@ -15,6 +15,25 @@ EPOCH_ORDINAL = 719163
 MONTH_NAMES = ["Dezember", "Januar", "Februar", u"März", "April", "Mai", "Juni",
                "Juli", "August", "September", "November", "Oktober", "Dezember"]
 
+def map_pixel(pixmap, mapper):
+    image = pixmap.toImage()
+
+    for x in xrange(0, pixmap.width()):
+        for y in xrange(0, pixmap.height()):
+            pixel = image.pixel(x, y)
+            tuple = mapper(qRed(pixel), qGreen(pixel), qBlue(pixel), qAlpha(pixel))
+            image.setPixel(x, y, qRgba(tuple[0], tuple[1], tuple[2], tuple[3]))
+
+    return QPixmap.fromImage(image)
+
+def lighter(r, g, b, a):
+    color = QColor(r, g, b, a).lighter(110)
+    return color.red(), color.green(), color.blue(), color.alpha()
+
+def darker(r, g, b, a):
+    color = QColor(r, g, b, a).darker()
+    return color.red(), color.green(), color.blue(), color.alpha()
+
 class CalendarStrip(QWidget):
     def __init__(self, parent=None):
         super(CalendarStrip, self).__init__(parent)
@@ -31,20 +50,72 @@ class CalendarStrip(QWidget):
         self._offset = offset
 
     def visibleDays(self):
-        return range(
-            int(self._offset - max([33])),
-            int(self._offset + self.width() / self.columnWidth() + 1))
+        start = int(self._offset - max([33]))
+        end = int(self._offset + self.width() / self.columnWidth() + 1)
+
+        for day in xrange(start, end):
+            x = (day - self._offset) * self.columnWidth()
+            yield x, datetime.date.fromordinal(day + EPOCH_ORDINAL)
 
     def sizeHint(self):
         return QSize(40 * 20, 80)
 
 class CalendarHeader(CalendarStrip):
+
+    leftClicked = Signal()
+
     def __init__(self, parent=None):
         super(CalendarHeader, self).__init__(parent)
+        
+        self.setMouseTracking(True)
+
+        self.mousePos = None
+
+        self.leftActive = False
 
         self.leftPixmap = QPixmap(os.path.join(os.path.dirname(__file__), "date_previous.png"))
+        self.lighterLeftPixmap = map_pixel(self.leftPixmap, lighter)
+        self.darkerLeftPixmap = map_pixel(self.leftPixmap, darker)
+
         self.todayPixmap = QPixmap(os.path.join(os.path.dirname(__file__), "date.png"))
         self.rightPixmap = QPixmap(os.path.join(os.path.dirname(__file__), "date_next.png"))
+
+    def visibleLeftButtons(self):
+        for x, date in self.visibleDays():
+            if date.day == 1:
+                yield QRect(x + 32, (40 - 32) / 2, 32, 32)
+
+    def leaveEvent(self, event):
+        self.mousePos = None
+
+        for rect in self.visibleLeftButtons():
+            self.update(rect)
+
+    def mouseMoveEvent(self, event):
+        self.mousePos = event.pos()
+
+        for rect in self.visibleLeftButtons():
+            self.update(rect)
+
+    def mousePressEvent(self, event):
+        self.mousePos = event.pos()
+        self.leftActive = False
+
+        for rect in self.visibleLeftButtons():
+            if rect.contains(event.pos()):
+                self.leftActive = True
+                self.update(rect)
+
+    def mouseReleaseEvent(self, event):
+        self.mousePos = event.pos()
+        
+        for rect in self.visibleLeftButtons():
+            if rect.contains(event.pos()):
+                print "Left clicked!"
+                self.leftClicked.emit()
+                self.update(rect)
+
+        self.leftActive = False
 
     def paintEvent(self, event):
         painter = QPainter(self)
@@ -52,12 +123,10 @@ class CalendarHeader(CalendarStrip):
         opt = QStyleOptionHeader()
         opt.textAlignment = Qt.AlignCenter
         
-        for day in self.visibleDays():
-            date = datetime.date.fromordinal(day + EPOCH_ORDINAL)
-            xStart = (day - self.offset()) * self.columnWidth()
-            xEnd = (day - self.offset() + 1) * self.columnWidth()
+        for xStart, date in self.visibleDays():
+            xEnd = xStart + self.columnWidth()
             
-            if day % 7 == 4:
+            if date.toordinal() % 7 == 4:
                 opt.rect = QRect(xStart, 40, self.columnWidth() * 7, 20)
                 opt.text = str("Woche %d" % (date.timetuple().tm_yday / 7 + 1))
                 painter.save()
@@ -78,8 +147,6 @@ class CalendarHeader(CalendarStrip):
                 font.setBold(True)
                 painter.setFont(font)
                 
-                painter.drawPixmap(QRect(xStart + 32, (40 - 16) / 2, 16, 16), self.leftPixmap, QRect(0, 0, 16, 16))
-                
                 painter.drawPixmap(QRect(xStart + 64, (40 - 16) / 2, 16, 16), self.todayPixmap, QRect(0, 0, 16, 16))
                 
                 painter.drawPixmap(QRect(xStart + 96, (40 - 16) / 2, 16, 16), self.rightPixmap, QRect(0, 0, 16, 16))
@@ -94,6 +161,17 @@ class CalendarHeader(CalendarStrip):
             self.style().drawControl(QStyle.CE_Header, opt, painter, self)
             painter.restore()
 
+        # Draw go left buttons.
+        for rect in self.visibleLeftButtons():
+            pixmapRect = QRect(rect.x() + (rect.width() - 16) / 2, rect.y() + (rect.height() - 16) / 2, 16, 16)
+            if self.mousePos and rect.contains(self.mousePos):
+                if self.leftActive:
+                    painter.drawPixmap(pixmapRect, self.darkerLeftPixmap, QRect(0, 0, 16, 16))
+                else:
+                    painter.drawPixmap(pixmapRect, self.lighterLeftPixmap, QRect(0, 0, 16, 16))
+            else:
+                painter.drawPixmap(pixmapRect, self.leftPixmap, QRect(0, 0, 16, 16))
+
         painter.end()
 
 
@@ -106,7 +184,10 @@ class CalendarPane(QScrollArea):
         super(CalendarPane, self).__init__(parent)
         self.setViewportMargins(0, 80, 0, 0)
         self.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        
+        self.setWidgetResizable(True)
         self.setWidget(FancyWidget(Qt.DiagCrossPattern, QSize(1000, 40), self))
+        
 
         self.header = CalendarHeader(self)
 
@@ -117,6 +198,9 @@ class CalendarPane(QScrollArea):
         self.installEventFilter(self)
 
         self.flag = False
+
+    def resizeEvent(self, event):
+        self.header.resize(self.width(), 80)
 
     def onAnimate(self, value):
         if not self.flag:
