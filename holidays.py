@@ -68,20 +68,21 @@ class CalendarHeader(CalendarStrip):
 
     def __init__(self, parent=None):
         super(CalendarHeader, self).__init__(parent)
-        
         self.setMouseTracking(True)
 
+        # Button state info.
         self.mousePos = None
-
         self.leftActive = False
         self.rightActive = False
 
+        # Left button pixmaps.
         self.leftPixmap = QPixmap(os.path.join(os.path.dirname(__file__), "date_previous.png"))
         self.lighterLeftPixmap = map_pixel(self.leftPixmap, lighter)
         self.darkerLeftPixmap = map_pixel(self.leftPixmap, darker)
 
         self.todayPixmap = QPixmap(os.path.join(os.path.dirname(__file__), "date.png"))
 
+        # Right button pixmaps.
         self.rightPixmap = QPixmap(os.path.join(os.path.dirname(__file__), "date_next.png"))
         self.lighterRightPixmap = map_pixel(self.rightPixmap, lighter)
         self.darkerRightPixmap = map_pixel(self.rightPixmap, darker)
@@ -126,16 +127,16 @@ class CalendarHeader(CalendarStrip):
 
     def mouseReleaseEvent(self, event):
         self.mousePos = event.pos()
-        
+
+        # Trigger left clicked signal.
         for rect in self.visibleLeftButtons():
             if rect.contains(event.pos()):
-                print "Left clicked!"
                 self.leftClicked.emit()
                 self.update(rect)
 
+        # Trigger right clicked signal.
         for rect in self.visibleRightButtons():
             if rect.contains(event.pos()):
-                print "Right clicked!"
                 self.rightClicked.emit()
                 self.update(rect)
 
@@ -224,6 +225,8 @@ class CalendarPane(QScrollArea):
         
 
         self.header = CalendarHeader(self)
+        self.header.leftClicked.connect(self.onLeftClicked)
+        self.header.rightClicked.connect(self.onRightClicked)
 
         self.animation = VariantAnimation(self)
         self.animation.setEasingCurve(QEasingCurve(QEasingCurve.InOutQuad))
@@ -232,6 +235,20 @@ class CalendarPane(QScrollArea):
         self.installEventFilter(self)
 
         self.flag = False
+
+    def onLeftClicked(self):
+        self.flag = False
+        self.animation.setStartValue(self.widget().offset())
+        self.animation.setEndValue(self.widget().offset() - 30)
+        self.animation.start()
+        self.flag = True
+
+    def onRightClicked(self):
+        self.flag = False
+        self.animation.setStartValue(self.widget().offset())
+        self.animation.setEndValue(self.widget().offset() + 30)
+        self.animation.start()
+        self.flag = True
 
     def resizeEvent(self, event):
         self.header.resize(self.width(), 80)
