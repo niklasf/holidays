@@ -371,14 +371,14 @@ class CalendarPane(QScrollArea):
                 self.animation.setStartValue(self.header.offset())
                 self.animation.setEndValue(float(self.offset))
                 self.animation.start()
+                return True
             elif event.key() == Qt.Key_Left:
                 self.offset -= days_of_month(date.year - 1 if date.month == 1 else date.year, 12 if date.month == 1 else date.month - 1)
 
                 self.animation.setStartValue(self.header.offset())
                 self.animation.setEndValue(float(self.offset))
                 self.animation.start()
-            elif event.key() == Qt.Key_Return:
-                self.onTodayClicked()
+                return True
 
         self.animationEnabled = True
 
