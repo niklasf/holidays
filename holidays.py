@@ -34,6 +34,9 @@ def darker(r, g, b, a):
     color = QColor(r, g, b, a).lighter(90)
     return color.red(), color.green(), color.blue(), color.alpha()
 
+def days_of_month(year, month):
+    return calendar.monthrange(year, month)[1]
+
 class CalendarStrip(QWidget):
     def __init__(self, parent=None):
         super(CalendarStrip, self).__init__(parent)
@@ -96,24 +99,24 @@ class CalendarHeader(CalendarStrip):
     def visibleLeftButtons(self):
         for x, date in self.visibleDays():
             if date.day == 1:
-                yield QRect(x + 32, (40 - 32) / 2, 32, 32)
+                yield date, QRect(x + 32, (40 - 32) / 2, 32, 32)
 
     def visibleTodayButtons(self):
         for x, date in self.visibleDays():
             if date.day == 1:
-                yield QRect(x + 32 * 2, (40 - 32) / 2, 32, 32)
+                yield date, QRect(x + 32 * 2, (40 - 32) / 2, 32, 32)
 
     def visibleRightButtons(self):
         for x, date in self.visibleDays():
             if date.day == 1:
-                yield QRect(x + 32 * 3, (40 - 32) / 2, 32, 32)
+                yield date, QRect(x + 32 * 3, (40 - 32) / 2, 32, 32)
 
     def updateButtons(self):
-        for rect in self.visibleLeftButtons():
+        for date, rect in self.visibleLeftButtons():
             self.update(rect)
-        for rect in self.visibleTodayButtons():
+        for date, rect in self.visibleTodayButtons():
             self.update(rect)
-        for rect in self.visibleRightButtons():
+        for date, rect in self.visibleRightButtons():
             self.update(rect)
 
     def leaveEvent(self, event):
@@ -128,17 +131,17 @@ class CalendarHeader(CalendarStrip):
         self.mousePos = event.pos()
         self.leftActive = False
 
-        for rect in self.visibleLeftButtons():
+        for date, rect in self.visibleLeftButtons():
             if rect.contains(event.pos()):
                 self.leftActive = True
                 self.update(rect)
 
-        for rect in self.visibleTodayButtons():
+        for date, rect in self.visibleTodayButtons():
             if rect.contains(event.pos()):
                 self.todayActive = True
                 self.update(rect)
 
-        for rect in self.visibleRightButtons():
+        for date, rect in self.visibleRightButtons():
             if rect.contains(event.pos()):
                 self.rightActive = True
                 self.update(rect)
@@ -147,19 +150,19 @@ class CalendarHeader(CalendarStrip):
         self.mousePos = event.pos()
 
         # Trigger left clicked signal.
-        for rect in self.visibleLeftButtons():
+        for date, rect in self.visibleLeftButtons():
             if rect.contains(event.pos()):
                 self.leftClicked.emit()
                 self.update(rect)
 
         # Trigger today clicked signal.
-        for rect in self.visibleTodayButtons():
+        for date, rect in self.visibleTodayButtons():
             if rect.contains(event.pos()):
                 self.todayClicked.emit()
                 self.update(rect)
 
         # Trigger right clicked signal.
-        for rect in self.visibleRightButtons():
+        for date, rect in self.visibleRightButtons():
             if rect.contains(event.pos()):
                 self.rightClicked.emit()
                 self.update(rect)
@@ -209,7 +212,7 @@ class CalendarHeader(CalendarStrip):
             painter.restore()
 
         # Draw go left buttons.
-        for rect in self.visibleLeftButtons():
+        for date, rect in self.visibleLeftButtons():
             pixmapRect = QRect(rect.x() + (rect.width() - 16) / 2, rect.y() + (rect.height() - 16) / 2, 16, 16)
             if self.mousePos and rect.contains(self.mousePos):
                 if self.leftActive:
@@ -220,7 +223,7 @@ class CalendarHeader(CalendarStrip):
                 painter.drawPixmap(pixmapRect, self.leftPixmap, QRect(0, 0, 16, 16))
 
         # Draw today buttons.
-        for rect in self.visibleTodayButtons():
+        for date, rect in self.visibleTodayButtons():
             pixmapRect = QRect(rect.x() + (rect.width() - 16) / 2, rect.y() + (rect.height() - 16) / 2, 16, 16)
             if self.mousePos and rect.contains(self.mousePos):
                 if self.todayActive:
@@ -232,7 +235,7 @@ class CalendarHeader(CalendarStrip):
 
 
         # Draw go right buttons.
-        for rect in self.visibleRightButtons():
+        for date, rect in self.visibleRightButtons():
             pixmapRect = QRect(rect.x() + (rect.width() - 16) / 2, rect.y() + (rect.height() - 16) / 2, 16, 16)
             if self.mousePos and rect.contains(self.mousePos):
                 if self.rightActive:
