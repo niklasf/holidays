@@ -275,6 +275,9 @@ class CalendarBody(CalendarStrip):
 
             painter.drawLine(x, 0, x, self.height())
 
+            if date < datetime.date.today():
+                painter.fillRect(QRect(x, 0, self.columnWidth(), self.height()), QBrush(Qt.Dense7Pattern))
+
         painter.end()
 
     def sizeHint(self):
