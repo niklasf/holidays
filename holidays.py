@@ -5,6 +5,7 @@ import sys
 import math
 import datetime
 import calendar
+import os
 
 from PySide.QtCore import *
 from PySide.QtGui import *
@@ -38,6 +39,13 @@ class CalendarStrip(QWidget):
         return QSize(40 * 20, 80)
 
 class CalendarHeader(CalendarStrip):
+    def __init__(self, parent=None):
+        super(CalendarHeader, self).__init__(parent)
+
+        self.leftPixmap = QPixmap(os.path.join(os.path.dirname(__file__), "date_previous.png"))
+        self.todayPixmap = QPixmap(os.path.join(os.path.dirname(__file__), "date.png"))
+        self.rightPixmap = QPixmap(os.path.join(os.path.dirname(__file__), "date_next.png"))
+
     def paintEvent(self, event):
         painter = QPainter(self)
         
@@ -69,7 +77,14 @@ class CalendarHeader(CalendarStrip):
                 font.setPointSizeF(font.pointSizeF() * 1.2)
                 font.setBold(True)
                 painter.setFont(font)
-                painter.drawText(QRect(xStart + 64, 0, self.columnWidth() * daysOfMonth[1] - 64 - 32, 40),
+                
+                painter.drawPixmap(QRect(xStart + 32, (40 - 16) / 2, 16, 16), self.leftPixmap, QRect(0, 0, 16, 16))
+                
+                painter.drawPixmap(QRect(xStart + 64, (40 - 16) / 2, 16, 16), self.todayPixmap, QRect(0, 0, 16, 16))
+                
+                painter.drawPixmap(QRect(xStart + 96, (40 - 16) / 2, 16, 16), self.rightPixmap, QRect(0, 0, 16, 16))
+                
+                painter.drawText(QRect(xStart + 128, 0, self.columnWidth() * daysOfMonth[1] - 64 - 128, 40),
                     Qt.AlignVCenter, "%s %d" % (MONTH_NAMES[date.month], date.year))
                 painter.restore()
             
