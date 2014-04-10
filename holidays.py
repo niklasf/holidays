@@ -263,9 +263,19 @@ class CalendarBody(CalendarStrip):
     def __init__(self, parent=None):
         super(CalendarBody, self).__init__(parent)
 
+        self.names = ["Niklas Fiekas", u"Heins Jürgen", u"Günter Gras"]
+
     def paintEvent(self, event):
         painter = QPainter(self)
         painter.fillRect(self.rect(), QBrush(QColor(255, 255, 255)))
+
+        painter.setPen(QPen(QColor(200, 200, 200)))
+
+        for i, name in enumerate(self.names):
+            painter.drawLine(0, (15 + 25 + 15) * i + 15,
+                self.width(), (15 + 25 + 15) * i + 15)
+            painter.drawLine(0, (15 + 25 + 15) * i + 15 + 25,
+                self.width(), (15 + 25 + 15) * i + 15 + 25)
 
         for x, date in self.visibleDays():
             if date.day == 1:
@@ -278,10 +288,17 @@ class CalendarBody(CalendarStrip):
             if date < datetime.date.today():
                 painter.fillRect(QRect(x, 0, self.columnWidth(), self.height()), QBrush(Qt.Dense7Pattern))
 
+        painter.setPen(QPen())
+
+        for x, date in self.visibleDays():
+            if date.day == 1:
+                for i, name in enumerate(self.names):
+                    painter.drawText(QRect(x + 10, (15 + 25 + 15) * i + 15, self.columnWidth() * 20 - 10, 25), Qt.AlignVCenter, name)
+
         painter.end()
 
     def sizeHint(self):
-        return QSize(40 * 25, 1000)
+        return QSize(40 * 25, len(self.names) * (15 + 25 + 15))
 
 class VariantAnimation(QVariantAnimation):
     def updateCurrentValue(self, value):
@@ -349,7 +366,7 @@ class CalendarPane(QScrollArea):
 
     def resizeEvent(self, event):
         self.header.resize(self.width(), self.header.sizeHint().height())
-        self.widget().resize(self.width(), max(self.widget().sizeHint().height(), self.height()))
+        self.widget().resize(self.width(), max(self.widget().sizeHint().height(), self.height() - 80 - 5))
 
     def onAnimate(self, value):
         if not self.animationEnabled:
