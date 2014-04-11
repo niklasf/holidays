@@ -343,6 +343,9 @@ class CalendarBody(CalendarStrip):
         self.app = app
         self.setMouseTracking(True)
 
+        self.setContextMenuPolicy(Qt.CustomContextMenu)
+        self.customContextMenuRequested(self.onCustomContextMenuRequested)
+
         self.mousePos = None
         self.mousePressPos = None
 
@@ -424,6 +427,15 @@ class CalendarBody(CalendarStrip):
         for holiday, rect in self.visibleHolidays():
             if rect.contains(event.pos()):
                 self.holidayClicked.emit(holiday.id)
+
+    def onCustomContextMenuRequested(self, pos):
+        contextMenu = QMenu()
+
+        for holiday, rect in self.visibleHolidays():
+            contextMenu.addAction("Bearbeiten", lambda: self.holidayClicked.emit(holiday.id))
+            break
+
+        contextMenu.exec_(self.mapToGlobal(pos))
 
     def visibleHolidays(self):
         for holiday in self.app.holidayModel.holidayCache.values():
@@ -690,6 +702,10 @@ class MainWindow(QMainWindow):
         self.initMenu()
 
     def initActions(self):
+        #self.reloadAction = QAction("Aktualisieren", self)
+        #self.reloadAction.setShortcut("F5")
+        #self.reloadAction.triggered.connect(self.onReloadAction)
+
         self.aboutAction = QAction(u"Über ...", self)
         self.aboutAction.setShortcut("F1")
         self.aboutAction.triggered.connect(self.onAboutAction)
@@ -743,7 +759,7 @@ class HolidayDialog(QDialog):
         self.initValues()
 
         self.setWindowFlags(self.windowFlags() & ~Qt.WindowContextHelpButtonHint)
-        
+
     def initUi(self):
         layout = QGridLayout(self)
 
