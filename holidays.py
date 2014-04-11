@@ -509,7 +509,7 @@ class Holiday(object):
         self.contactId = None
         self.type = 0
         self.confirmed = False
-        self.begin = None
+        self.start = None
         self.end = None
         self.comment = ""
 
@@ -530,7 +530,7 @@ class HolidayModel(QObject):
         self.contactCache.clear()
 
         cursor = self.app.db.cursor()
-        cursor.execute("SELECT contact_id, firstname, name, email, login_id FROM contact ORDER BY name ASC")
+        cursor.execute("SELECT contact_id, firstname, name, email, login_id FROM contact WHERE department = 18 OR login_id = '10179939' ORDER BY name ASC")
         for record in cursor:
             contact = Contact(self.app)
             contact.id = record[0]
@@ -621,6 +621,25 @@ class HolidayDialog(QDialog):
         self.contactBox.setTextFormat(Qt.RichText)
         self.contactBox.setOpenExternalLinks(True)
         layout.addWidget(self.contactBox, 0, 1)
+
+        layout.addWidget(QLabel("Beginn:"), 1, 0)
+        self.startBox = QDateEdit()
+        layout.addWidget(self.startBox, 1, 1)
+        
+        layout.addWidget(QLabel("Ende:"), 2, 0)
+        self.endBox = QDateEdit()
+        layout.addWidget(self.endBox, 2, 1)
+        
+        layout.addWidget(QLabel("Kommentar:"), 3, 0, Qt.AlignTop)
+        self.commentBox = QTextEdit()
+        layout.addWidget(self.commentBox, 3, 1)
+        
+        layout.addWidget(QLabel("Typ:"), 4, 0)
+        self.confirmedBox = QCheckBox("Genehmigt")
+        layout.addWidget(self.confirmedBox, 4, 1)
+
+        self.buttons = QDialogButtonBox(QDialogButtonBox.Cancel | QDialogButtonBox.Save)
+        layout.addWidget(self.buttons, 5, 0, 1, 2)
 
     def initValues(self):
         contact = self.holiday.contact()
