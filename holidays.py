@@ -602,6 +602,9 @@ class MainWindow(QMainWindow):
         holidaysMenu = self.menuBar().addMenu("Urlaube")
         holidaysMenu.addAction(self.createHolidayAction)
 
+    def sizeHint(self):
+        return QSize(900, 600)
+
 class HolidayDialog(QDialog):
     def __init__(self, app, holiday, parent=None):
         super(HolidayDialog, self).__init__(parent)
