@@ -476,9 +476,13 @@ class CalendarBody(CalendarStrip):
 
     def visibleHolidays(self):
         for holiday in self.app.holidayModel.holidayCache.values():
+            try:
+                y = self.app.holidayModel.contactCache.keys().index(holiday.contactId) * (15 + 25 + 15) + 15
+            except KeyError:
+                continue
+
             startX = (holiday.start.toordinal() - EPOCH_ORDINAL - self.offset()) * self.columnWidth()
             endX = (holiday.end.toordinal() + 1 - EPOCH_ORDINAL - self.offset()) * self.columnWidth()
-            y = self.app.holidayModel.contactCache.keys().index(holiday.contactId) * (15 + 25 + 15) + 15
             yield holiday, QRect(startX, y, endX - startX, 25)
 
 
@@ -774,9 +778,9 @@ class MainWindow(QMainWindow):
         self.initMenu()
 
     def initActions(self):
-        #self.reloadAction = QAction("Aktualisieren", self)
-        #self.reloadAction.setShortcut("F5")
-        #self.reloadAction.triggered.connect(self.onReloadAction)
+        self.reloadAction = QAction("Aktualisieren", self)
+        self.reloadAction.setShortcut("F5")
+        self.reloadAction.triggered.connect(self.onReloadAction)
 
         self.aboutAction = QAction(u"Über ...", self)
         self.aboutAction.setShortcut("F1")
@@ -809,8 +813,13 @@ class MainWindow(QMainWindow):
         dialog = HolidayDialog(self.app, holiday, self)
         dialog.show()
 
+    def onReloadAction(self):
+        self.app.holidayModel.reload()
+
     def initMenu(self):
         mainMenu = self.menuBar().addMenu("Programm")
+        mainMenu.addAction(self.reloadAction)
+        mainMenu.addSeparator()
         mainMenu.addAction(self.aboutAction)
         mainMenu.addAction(self.aboutQtAction)
 
