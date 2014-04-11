@@ -338,6 +338,8 @@ class CalendarBody(CalendarStrip):
 
     holidayClicked = Signal(int)
 
+    dayClicked = Signal(int)
+
     def __init__(self, app, parent=None):
         super(CalendarBody, self).__init__(parent)
         self.app = app
@@ -417,23 +419,39 @@ class CalendarBody(CalendarStrip):
         self.update()
 
     def mousePressEvent(self, event):
-        self.mousePressPos = event.pos()
-        self.update()
+        if event.button() == Qt.LeftButton:
+            self.mousePressPos = event.pos()
+            self.update()
 
     def mouseReleaseEvent(self, event):
         self.mousePressPos = None
-        self.update()
 
+        if event.button() == Qt.LeftButton:
+            self.update()
+
+            for holiday, rect in self.visibleHolidays():
+                if rect.contains(event.pos()):
+                    self.holidayClicked.emit(holiday.id)
+
+    def mouseDoubleClickEvent(self, event):
         for holiday, rect in self.visibleHolidays():
             if rect.contains(event.pos()):
-                self.holidayClicked.emit(holiday.id)
+                return
+
+        self.onDayClicked(event.pos())
+
+    def onDayClicked(self, pos):
+        self.dayClicked.emit(int(self.offset() + pos.x() / self.columnWidth()))
 
     def onCustomContextMenuRequested(self, pos):
         contextMenu = QMenu()
 
+        contextMenu.addAction(u"Eintragen", lambda: self.onDayClicked(pos))
+        contextMenu.addSeparator()
+
         for holiday, rect in self.visibleHolidays():
-            contextMenu.addAction("Bearbeiten", lambda: self.holidayClicked.emit(holiday.id))
-            break
+            if rect.contains(pos):
+                contextMenu.addAction("Bearbeiten (%d)" % holiday.id, lambda: self.holidayClicked.emit(holiday.id))
 
         contextMenu.exec_(self.mapToGlobal(pos))
 
@@ -471,6 +489,7 @@ class CalendarPane(QScrollArea):
         self.setWidget(CalendarBody(app, self))
         self.widget().setOffset(self.offset)
         self.widget().holidayClicked.connect(self.onHolidayClicked)
+        self.widget().dayClicked.connect(self.onDayClicked)
 
         self.animation = VariantAnimation(self)
         self.animation.setEasingCurve(QEasingCurve(QEasingCurve.InOutQuad))
@@ -516,6 +535,19 @@ class CalendarPane(QScrollArea):
 
     def onHolidayClicked(self, holidayId):
         holiday = self.app.holidayModel.holidayCache[holidayId]
+        dialog = HolidayDialog(self.app, holiday, self)
+        dialog.show()
+
+    def onDayClicked(self, offset):
+        if not self.app.holidayModel.contactFromHandle():
+            QMessageBox.warning(self, "Urlaubsplaner", u"Sie (%s) können keinen Urlaub eintragen, da Sie nicht in der Kontakttabelle verzeichnet sind." % getpass.getuser())
+            return
+
+        holiday = Holiday(self.app)
+        holiday.start = datetime.date.fromordinal(offset + EPOCH_ORDINAL)
+        holiday.end = datetime.date.fromordinal(offset + EPOCH_ORDINAL + 7)
+        holiday.contactId = self.app.holidayModel.contactFromHandle().id
+
         dialog = HolidayDialog(self.app, holiday, self)
         dialog.show()
 
@@ -798,7 +830,7 @@ class HolidayDialog(QDialog):
         else:
             self.contactBox.setText(contact.name)
 
-        if self.holiday.id:
+        if not self.holiday.id:
             self.setWindowTitle("Urlaub eintragen")
         else:
             self.setWindowTitle("Urlaub: %s vom %s bis zum %s" % (
