@@ -44,7 +44,7 @@ class MessageQueue(QObject):
         """
         while True:
             try:
-                item = self.queue.get(True, 2)
+                item = self.queue.get(True, 10)
 
                 try:
                     cursor = self.db.cursor()
