@@ -420,11 +420,6 @@ class CalendarBody(CalendarStrip):
             painter.drawRect(rect)
 
         # Draw names.
-        font = self.font()
-        font.setBold(True)
-        painter.setFont(font)
-        painter.setPen(QPen(QColor(100, 100, 100)))
-
         for x, date in self.visibleDays():
             if date.day == 1:
                 for i, contact in enumerate(self.app.holidayModel.contactCache.values()):
