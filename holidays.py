@@ -368,6 +368,30 @@ class PastOverlay(object):
         return date < datetime.date.today()
 
 
+class SchoolHolidays(object):
+    def __init__(self, app):
+        self.app = app
+        self._brush = QBrush(self.app.orange, Qt.BDiagPattern)
+
+    def brush(self):
+        return self._brush
+
+    def matches(self, date):
+        # Sommerferien 2014.
+        if datetime.date(2014, 7, 31) <= date and date <= datetime.date(2014, 9, 10):
+            return True
+
+        # Herbstferien 2014.
+        if datetime.date(2014, 10, 27) <= date and date <= datetime.date(2014, 11, 8):
+            return True
+
+        # Weichnatsferien 2014.
+        if datetime.date(2014, 12, 22) <= date and date <= datetime.date(2014, 1, 5):
+            return True
+
+        return False
+
+
 class CalendarBody(CalendarStrip):
 
     holidayClicked = Signal(int)
@@ -379,7 +403,7 @@ class CalendarBody(CalendarStrip):
         self.app = app
         self.setMouseTracking(True)
 
-        self.overlays = [HolidayOverlay(self.app), PastOverlay(self.app)]
+        self.overlays = [HolidayOverlay(self.app), SchoolHolidays(self.app), PastOverlay(self.app)]
 
         self.setContextMenuPolicy(Qt.CustomContextMenu)
         self.customContextMenuRequested.connect(self.onCustomContextMenuRequested)
