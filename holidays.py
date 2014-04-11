@@ -15,6 +15,7 @@ import datetime
 import calendar
 import os
 import getpass
+import message_queue
 
 from PySide.QtCore import *
 from PySide.QtGui import *
@@ -639,13 +640,19 @@ class Application(QApplication):
         self.config = ConfigParser.ConfigParser()
         self.config.read(os.path.join(os.path.dirname(__file__), "config.ini"))
 
-    def initDb(self):
-        self.db = mysql.connector.connect(
+    def mysqlConnect(self):
+        return mysql.connector.connect(
             user=self.config.get("MySQL", "User"),
             password=self.config.get("MySQL", "Password"),
             database=self.config.get("MySQL", "Database"),
             host=self.config.get("MySQL", "Host"),
             autocommit=True)
+
+    def initDb(self):
+        self.db = self.mysqlConnect()
+
+    def initMessageQueue(self):
+        self.messageQueue = message_queue.MessageQueue(mysql.connect())
 
     def initModel(self):
         self.holidayModel = HolidayModel(self)
@@ -692,6 +699,8 @@ class HolidayModel(QObject):
 
         self.contactCache = indexed.IndexedOrderedDict()
         self.holidayCache = indexed.IndexedOrderedDict()
+
+        self.app.messageQueue.received.connect(self.onMessageReceived)
 
     def reload(self):
         self.contactCache.clear()
@@ -747,11 +756,15 @@ class HolidayModel(QObject):
         if holiday.id:
             record["id"] = holiday.id
             cursor.execute("UPDATE holiday SET contact_id = %(contact_id)s, type = %(type)s, confirmed = %(confirmed)s, start = %(start)s, end = %(end)s, comment = %(comment)s WHERE id = %(id)s", record)
+
+            self.app.messageQueue.publish("holiday", "update", holiday.id)
         else:
             cursor.execute("INSERT INTO holiday (contact_id, type, confirmed, start, end, comment) VALUES (%(contact_id)s, %(type)s, %(confirmed)s, %(start)s, %(end)s, %(comment)s)", record)
             holiday.id = cursor.lastrowid
-            self.holidayCache[holiday.id] = holiday
+            
+            self.app.messageQueue.publish("holiday", "insert", holiday.id)
 
+        self.holidayCache[holiday.id] = holiday
         self.modelReset.emit()
 
     def delete(self, holidayId):
@@ -761,8 +774,13 @@ class HolidayModel(QObject):
         cursor.execute("DELETE FROM holiday WHERE id = %(id)s", {
             "id": holidayId,
         })
+        self.app.messageQueue.publish("holiday", "delete", holidayId)
 
         self.modelReset.emit()
+
+    def onMessageReceived(self, id, session, channel, message, extra):
+        if channel == "holiday":
+            self.reload()
 
 
 class MainWindow(QMainWindow):
@@ -979,6 +997,7 @@ if __name__ == "__main__":
     app.initConfig()
     app.initResources()
     app.initDb()
+    app.initMessageQueue()
     app.initModel()
 
     window = MainWindow(app)
