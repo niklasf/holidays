@@ -390,13 +390,23 @@ class CalendarBody(CalendarStrip):
         # Draw holidays.
         for holiday, rect in self.visibleHolidays():
             painter.setPen(QPen())
+
+            if holiday.type == 0 and holiday.confirmed:
+                color = self.app.green
+            elif holiday.type == 0 and not holiday.confirmed:
+                color = self.app.blue
+            elif holiday.type == 1:
+                color = self.app.orange
+            elif holiday.type == 2:
+                color = self.app.purple
+
             if self.mousePos and rect.contains(self.mousePos):
                 if self.mousePressPos:
-                    painter.setBrush(QBrush(self.app.green.lighter(90)))
+                    painter.setBrush(QBrush(color.lighter(90)))
                 else:
-                    painter.setBrush(QBrush(self.app.green.lighter(110)))
+                    painter.setBrush(QBrush(color.lighter(110)))
             else:
-                painter.setBrush(QBrush(self.app.green))
+                painter.setBrush(QBrush(color))
             painter.drawRect(rect)
 
         # Draw names.
