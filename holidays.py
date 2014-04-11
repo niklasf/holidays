@@ -344,7 +344,7 @@ class CalendarBody(CalendarStrip):
         self.setMouseTracking(True)
 
         self.setContextMenuPolicy(Qt.CustomContextMenu)
-        self.customContextMenuRequested(self.onCustomContextMenuRequested)
+        self.customContextMenuRequested.connect(self.onCustomContextMenuRequested)
 
         self.mousePos = None
         self.mousePressPos = None
