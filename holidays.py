@@ -1,6 +1,12 @@
 #!/usr/bin/python2.7
 # -*- coding: utf-8 -*-
 
+__author__ = "Niklas Fiekas"
+
+__email__ = "niklas.fiekas@tu-clausthal.de"
+
+import ConfigParser
+import mysql.connector
 import sys
 import math
 import datetime
@@ -467,10 +473,56 @@ class CalendarPane(QScrollArea):
 
         return super(CalendarPane, self).eventFilter(watched, event)
 
-if __name__ == "__main__":
-    app = QApplication(sys.argv)
+class Application(QApplication):
+    def initConfig(self):
+        self.config = ConfigParser.ConfigParser()
+        self.config.read(os.path.join(os.path.dirname(__file__), "config.ini"))
 
-    w = CalendarPane()
-    w.show()
+    def initDb(self):
+        self.db = mysql.connector.connect(
+            user=self.config.get("MySQL", "User"),
+            password=self.config.get("MySQL", "Password"),
+            database=self.config.get("MySQL", "Database"),
+            host=self.config.get("MySQL", "Host"),
+            autocommit=True)
+
+class MainWindow(QMainWindow):
+    def __init__(self, app):
+        super(MainWindow, self).__init__()
+        self.app = app
+
+        self.setCentralWidget(CalendarPane())
+        self.setWindowTitle("Urlaubsplanung")
+
+        self.initActions()
+        self.initMenu()
+
+    def initActions(self):
+        self.aboutAction = QAction(u"Über ...", self)
+        self.aboutAction.setShortcut("F1")
+        self.aboutAction.triggered.connect(self.onAboutAction)
+
+        self.aboutQtAction =  QAction(u"Über Qt ...", self)
+        self.aboutQtAction.triggered.connect(self.onAboutQtAction)
+
+    def onAboutAction(self):
+        QMessageBox.about(self, self.windowTitle(),
+            "<h1>Urlaubsplanung</h1>%s &lt;<a href=\"mailto:%s\">%s</a>&gt;" % (__author__, __email__, __email__))
+
+    def onAboutQtAction(self):
+        QMessageBox.aboutQt(self, self.windowTitle())
+
+    def initMenu(self):
+        mainMenu = self.menuBar().addMenu("Programm")
+        mainMenu.addAction(self.aboutAction)
+        mainMenu.addAction(self.aboutQtAction)
+
+if __name__ == "__main__":
+    app = Application(sys.argv)
+    app.initConfig()
+    app.initDb()
+
+    window = MainWindow(app)
+    window.show()
 
     app.exec_()
