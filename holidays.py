@@ -45,6 +45,15 @@ def darker(r, g, b, a):
     return color.red(), color.green(), color.blue(), color.alpha()
 
 
+def contrasting_color(color):
+    (r, g, b, a) = color.getRgb()
+    brightness = r * 0.2126 + g * 0.7152 + b * 0.0722
+    if brightness > 125:
+        return QColor(38, 38, 38, a)
+    else:
+        return QColor(217, 217, 217, a)
+
+
 def days_of_month(year, month):
     return calendar.monthrange(year, month)[1]
 
@@ -616,7 +625,10 @@ class Application(QApplication):
         self.yellow = QColor(255, 183, 0)
         self.purple = QColor(95, 73, 122)
         self.gray = QColor(191, 191, 191)
-        
+
+    def initResources(self):
+        self.dateIcon = QIcon(os.path.join(os.path.dirname(__file__), "date.png"))
+
     def initConfig(self):
         self.config = ConfigParser.ConfigParser()
         self.config.read(os.path.join(os.path.dirname(__file__), "config.ini"))
@@ -743,6 +755,7 @@ class MainWindow(QMainWindow):
         self.app = app
 
         self.setCentralWidget(CalendarPane(self.app))
+        self.setWindowIcon(self.app.dateIcon)
         self.setWindowTitle("Urlaubsplanung")
 
         self.initActions()
@@ -805,6 +818,7 @@ class HolidayDialog(QDialog):
         self.initUi()
         self.initValues()
 
+        self.setWindowIcon(self.app.dateIcon)
         self.setWindowFlags(self.windowFlags() & ~Qt.WindowContextHelpButtonHint)
 
     def initUi(self):
@@ -922,6 +936,7 @@ if __name__ == "__main__":
     app = Application(sys.argv)
     app.initColors()
     app.initConfig()
+    app.initResources()
     app.initDb()
     app.initModel()
 
