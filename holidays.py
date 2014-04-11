@@ -14,6 +14,7 @@ import math
 import datetime
 import calendar
 import os
+import getpass
 
 from PySide.QtCore import *
 from PySide.QtGui import *
@@ -362,7 +363,7 @@ class CalendarBody(CalendarStrip):
 
         for x, date in self.visibleDays():
             if date.day == 1:
-                for i, contact in enumerate(self.app.holidayModel.cache.viewvalues()):
+                for i, contact in enumerate(self.app.holidayModel.contactCache.viewvalues()):
                     painter.drawText(QRect(x + 10, (15 + 25 + 15) * i + 15, self.columnWidth() * 20 - 10, 25), Qt.AlignVCenter, contact.name)
 
         painter.end()
@@ -493,11 +494,27 @@ class Application(QApplication):
         self.holidayModel.reload()
 
 class Contact(object):
-    def __init__(self):
+    def __init__(self, app):
+        self.app = app
+
         self.id = None
         self.name = None
         self.email = None
         self.handle = None
+
+class Holiday(object):
+    def __init__(self, app):
+        self.app = app
+
+        self.contactId = None
+        self.type = 0
+        self.confirmed = False
+        self.begin = None
+        self.end = None
+        self.comment = ""
+
+    def contact(self):
+        return self.app.holidayModel.contactCache[self.contactId]
 
 class HolidayModel(QObject):
 
@@ -507,28 +524,34 @@ class HolidayModel(QObject):
         super(HolidayModel, self).__init__()
         self.app = app
 
-        self.cache = indexed.IndexedOrderedDict()
+        self.contactCache = indexed.IndexedOrderedDict()
 
     def reload(self):
-        self.cache.clear()
+        self.contactCache.clear()
 
         cursor = self.app.db.cursor()
-        cursor.execute("SELECT contact_id, firstname, name, email, login_id FROM contact WHERE login_id ORDER BY name, firstname ASC")
+        cursor.execute("SELECT contact_id, firstname, name, email, login_id FROM contact ORDER BY name ASC")
         for record in cursor:
-            contact = Contact()
+            contact = Contact(self.app)
             contact.id = record[0]
             contact.name = "%s, %s" % (record[2], record[1])
             contact.email = record[3]
             contact.handle = record[4]
-            self.cache[contact.id] = contact
+            self.contactCache[contact.id] = contact
 
         self.modelReset.emit()
 
     def rowCount(self):
-        return len(self.cache)
+        return len(self.contactCache)
 
     def data(self, row):
-        return self.cache.viewvalues()[row]
+        return self.contactCache.viewvalues()[row]
+
+    def contactFromHandle(self, handle=getpass.getuser()):
+        for contact in self.contactCache.viewvalues():
+            print contact.handle
+            if contact.handle == handle:
+                return contact
 
 class MainWindow(QMainWindow):
     def __init__(self, app):
@@ -549,6 +572,10 @@ class MainWindow(QMainWindow):
         self.aboutQtAction =  QAction(u"Über Qt ...", self)
         self.aboutQtAction.triggered.connect(self.onAboutQtAction)
 
+        self.createHolidayAction = QAction("Neu", self)
+        self.createHolidayAction.setShortcut("Ctrl + N")
+        self.createHolidayAction.triggered.connect(self.onCreateHolidayAction)
+
     def onAboutAction(self):
         QMessageBox.about(self, self.windowTitle(),
             "<h1>Urlaubsplanung</h1>%s &lt;<a href=\"mailto:%s\">%s</a>&gt;" % (__author__, __email__, __email__))
@@ -556,10 +583,53 @@ class MainWindow(QMainWindow):
     def onAboutQtAction(self):
         QMessageBox.aboutQt(self, self.windowTitle())
 
+    def onCreateHolidayAction(self):
+        if not self.app.holidayModel.contactFromHandle():
+            QMessageBox.warning(self, self.windowTitle(), u"Sie (%s) können keinen Urlaub eintragen, da Sie nicht in der Kontakttabelle verzeichnet sind." % getpass.getuser())
+            return
+
+        holiday = Holiday(self.app)
+        holiday.contactId = self.app.holidayModel.contactFromHandle().id
+
+        dialog = HolidayDialog(self.app, holiday, self)
+        dialog.show()
+
     def initMenu(self):
         mainMenu = self.menuBar().addMenu("Programm")
         mainMenu.addAction(self.aboutAction)
         mainMenu.addAction(self.aboutQtAction)
+
+        holidaysMenu = self.menuBar().addMenu("Urlaube")
+        holidaysMenu.addAction(self.createHolidayAction)
+
+class HolidayDialog(QDialog):
+    def __init__(self, app, holiday, parent=None):
+        super(HolidayDialog, self).__init__(parent)
+        self.app = app
+        self.holiday = holiday
+
+        self.initUi()
+        self.initValues()
+
+        self.setWindowTitle("Urlaub")
+
+    def initUi(self):
+        layout = QGridLayout(self)
+
+        layout.addWidget(QLabel("Person:"), 0, 0)
+        self.contactBox = QLabel()
+        self.contactBox.setTextFormat(Qt.RichText)
+        self.contactBox.setOpenExternalLinks(True)
+        layout.addWidget(self.contactBox, 0, 1)
+
+    def initValues(self):
+        contact = self.holiday.contact()
+        if contact.email:
+            self.contactBox.setText("<a href=\"mailto:%s\">%s &lt;%s&gt;</a>" %
+                    (contact.email, contact.name, contact.email))
+        else:
+            self.contactBox.setText(contact.name)
+
 
 if __name__ == "__main__":
     app = Application(sys.argv)
