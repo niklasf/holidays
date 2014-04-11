@@ -627,7 +627,7 @@ class Application(QApplication):
         self.gray = QColor(191, 191, 191)
 
     def initResources(self):
-        self.dateIcon = QIcon(os.path.join(os.path.dirname(__file__), "date.png"))
+        self.dateIcon = QIcon(os.path.join(os.path.dirname(__file__), "date.ico"))
 
     def initConfig(self):
         self.config = ConfigParser.ConfigParser()
