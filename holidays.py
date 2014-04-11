@@ -466,6 +466,8 @@ class CalendarBody(CalendarStrip):
                 color = self.app.orange
             elif holiday.type == TYPE_BUSINESS_TRIP:
                 color = self.app.purple
+            elif holiday.type == TYPE_PLANNED:
+                color = self.app.gray
 
             if self.mousePos and rect.contains(self.mousePos):
                 if self.mousePressPos:
@@ -732,6 +734,7 @@ class Contact(object):
 TYPE_HOLIDAY = 0
 TYPE_BUSINESS_TRIP = 1
 TYPE_HEALTH = 2
+TYPE_PLANNED = 3
 
 class Holiday(object):
     def __init__(self, app):
@@ -1026,8 +1029,9 @@ class TypeComboBox(QComboBox):
         self.addItem("Urlaub", TYPE_HOLIDAY)
         self.addItem("Dienstreise", TYPE_BUSINESS_TRIP)
         self.addItem("Krankheit", TYPE_HEALTH)
+        self.addItem("Planung", TYPE_PLANNED)
 
-        for row, color in enumerate([self.app.green, self.app.purple, self.app.orange]):
+        for row, color in enumerate([self.app.green, self.app.purple, self.app.orange, self.app.gray]):
             index = self.model().index(row, 0)
             self.model().setData(index, color, Qt.BackgroundRole)
             self.model().setData(index, contrasting_color(color), Qt.ForegroundRole)
@@ -1039,6 +1043,8 @@ class TypeComboBox(QComboBox):
             return TYPE_BUSINESS_TRIP
         elif self.currentIndex() == 2:
             return TYPE_HEALTH
+        elif self.currentIndex() == 3:
+            return TYPE_PLANNED
 
     def setType(self, type):
         if type == TYPE_HOLIDAY:
@@ -1047,6 +1053,8 @@ class TypeComboBox(QComboBox):
             self.setCurrentIndex(1)
         elif type == TYPE_HEALTH:
             self.setCurrentIndex(2)
+        elif type == TYPE_PLANNED:
+            self.setCurrentIndex(3)
         else:
             self.setCurrentIndex(-1)
 
