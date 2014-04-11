@@ -865,10 +865,12 @@ class HolidayDialog(QDialog):
         hbox = QHBoxLayout()
         self.deleteButton = QPushButton(self.app.deleteIcon, u"Löschen")
         self.deleteButton.clicked.connect(self.onDeleteClicked)
+        self.deleteButton.setAutoDefault(False)
         hbox.addWidget(self.deleteButton, 0)
         hbox.addSpacing(1)
         self.cancelButton = QPushButton("Abbrechen")
         self.cancelButton.clicked.connect(self.reject)
+        self.cancelButton.setAutoDefault(False)
         hbox.addWidget(self.cancelButton, 0)
         self.saveButton = QPushButton("Speichern")
         self.saveButton.clicked.connect(self.onAccept)
@@ -920,7 +922,10 @@ class HolidayDialog(QDialog):
 
     def onDeleteClicked(self):
         if self.holiday.id:
-            self.app.holidayModel.delete(self.holiday.id)
+            if QMessageBox.Yes == QMessageBox.question(self, self.windowTitle(),
+                                                       u"Diesen Eintrag wirklich löschen?",
+                                                       QMessageBox.Yes | QMessageBox.No):
+                self.app.holidayModel.delete(self.holiday.id)
 
         self.reject()
 
