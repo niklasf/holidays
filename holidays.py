@@ -386,7 +386,7 @@ class SchoolHolidays(object):
             return True
 
         # Weichnatsferien 2014.
-        if datetime.date(2014, 12, 22) <= date and date <= datetime.date(2014, 1, 5):
+        if datetime.date(2014, 12, 22) <= date and date <= datetime.date(2015, 1, 5):
             return True
 
         return False
