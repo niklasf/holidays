@@ -5,6 +5,8 @@ __author__ = "Niklas Fiekas"
 
 __email__ = "niklas.fiekas@tu-clausthal.de"
 
+import indexed
+
 import ConfigParser
 import mysql.connector
 import sys
@@ -324,10 +326,9 @@ class CalendarHeader(CalendarStrip):
         return QSize(40 * 25, 80)
 
 class CalendarBody(CalendarStrip):
-    def __init__(self, parent=None):
+    def __init__(self, app, parent=None):
         super(CalendarBody, self).__init__(parent)
-
-        self.names = ["Niklas Fiekas", u"Heins Jürgen", u"Günter Gras"]
+        self.app = app
 
     def paintEvent(self, event):
         painter = QPainter(self)
@@ -335,7 +336,7 @@ class CalendarBody(CalendarStrip):
 
         painter.setPen(QPen(QColor(200, 200, 200)))
 
-        for i, name in enumerate(self.names):
+        for i in xrange(self.app.holidayModel.rowCount()):
             painter.drawLine(0, (15 + 25 + 15) * i + 15,
                 self.width(), (15 + 25 + 15) * i + 15)
             painter.drawLine(0, (15 + 25 + 15) * i + 15 + 25,
@@ -361,21 +362,22 @@ class CalendarBody(CalendarStrip):
 
         for x, date in self.visibleDays():
             if date.day == 1:
-                for i, name in enumerate(self.names):
-                    painter.drawText(QRect(x + 10, (15 + 25 + 15) * i + 15, self.columnWidth() * 20 - 10, 25), Qt.AlignVCenter, name)
+                for i, contact in enumerate(self.app.holidayModel.cache.viewvalues()):
+                    painter.drawText(QRect(x + 10, (15 + 25 + 15) * i + 15, self.columnWidth() * 20 - 10, 25), Qt.AlignVCenter, contact.name)
 
         painter.end()
 
     def sizeHint(self):
-        return QSize(40 * 25, len(self.names) * (15 + 25 + 15))
+        return QSize(40 * 25, self.app.holidayModel.rowCount() * (15 + 25 + 15))
 
 class VariantAnimation(QVariantAnimation):
     def updateCurrentValue(self, value):
         pass
 
 class CalendarPane(QScrollArea):
-    def __init__(self, parent=None):
+    def __init__(self, app, parent=None):
         super(CalendarPane, self).__init__(parent)
+        self.app = app
         self.setViewportMargins(0, 80, 0, 0)
         self.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
 
@@ -388,7 +390,7 @@ class CalendarPane(QScrollArea):
         self.header.rightClicked.connect(self.onRightClicked)
         self.header.setOffset(self.offset)
 
-        self.setWidget(CalendarBody(self))
+        self.setWidget(CalendarBody(app, self))
         self.widget().setOffset(self.offset)
 
         self.animation = VariantAnimation(self)
@@ -486,12 +488,54 @@ class Application(QApplication):
             host=self.config.get("MySQL", "Host"),
             autocommit=True)
 
+    def initModel(self):
+        self.holidayModel = HolidayModel(self)
+        self.holidayModel.reload()
+
+class Contact(object):
+    def __init__(self):
+        self.id = None
+        self.name = None
+        self.email = None
+        self.handle = None
+
+class HolidayModel(QObject):
+
+    modelReset = Signal()
+
+    def __init__(self, app):
+        super(HolidayModel, self).__init__()
+        self.app = app
+
+        self.cache = indexed.IndexedOrderedDict()
+
+    def reload(self):
+        self.cache.clear()
+
+        cursor = self.app.db.cursor()
+        cursor.execute("SELECT contact_id, firstname, name, email, login_id FROM contact WHERE login_id ORDER BY name, firstname ASC")
+        for record in cursor:
+            contact = Contact()
+            contact.id = record[0]
+            contact.name = "%s, %s" % (record[2], record[1])
+            contact.email = record[3]
+            contact.handle = record[4]
+            self.cache[contact.id] = contact
+
+        self.modelReset.emit()
+
+    def rowCount(self):
+        return len(self.cache)
+
+    def data(self, row):
+        return self.cache.viewvalues()[row]
+
 class MainWindow(QMainWindow):
     def __init__(self, app):
         super(MainWindow, self).__init__()
         self.app = app
 
-        self.setCentralWidget(CalendarPane())
+        self.setCentralWidget(CalendarPane(self.app))
         self.setWindowTitle("Urlaubsplanung")
 
         self.initActions()
@@ -521,6 +565,7 @@ if __name__ == "__main__":
     app = Application(sys.argv)
     app.initConfig()
     app.initDb()
+    app.initModel()
 
     window = MainWindow(app)
     window.show()
