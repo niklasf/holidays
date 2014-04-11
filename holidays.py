@@ -356,7 +356,7 @@ class HolidayOverlay(object):
         return is_holiday(date)
 
 
-def PastOverlay(object):
+class PastOverlay(object):
     def __init__(self, app):
         self.app = app
         self._brush = QBrush(Qt.Dense7Pattern)
