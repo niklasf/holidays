@@ -343,9 +343,9 @@ class CalendarBody(CalendarStrip):
 
     def paintEvent(self, event):
         painter = QPainter(self)
-        painter.fillRect(self.rect(), QBrush(QColor(255, 255, 255)))
+        painter.fillRect(self.rect(), QBrush(self.app.white))
 
-        painter.setPen(QPen(QColor(200, 200, 200)))
+        painter.setPen(QPen(self.app.gray))
 
         for i in xrange(self.app.holidayModel.rowCount()):
             painter.drawLine(0, (15 + 25 + 15) * i + 15,
@@ -359,31 +359,31 @@ class CalendarBody(CalendarStrip):
             if date.day == 1:
                 painter.setPen(QPen())
             else:
-                painter.setPen(QPen(QColor(200, 200, 200)))
+                painter.setPen(QPen(self.app.gray))
 
             painter.drawLine(x, 0, x, self.height())
 
             if is_holiday(date):
-                painter.fillRect(rect, QBrush(QColor(250, 220, 200, 100)))
+                painter.fillRect(rect, QBrush(self.app.lightRed))
 
             if date < datetime.date.today():
                 painter.fillRect(rect, QBrush(Qt.Dense7Pattern))
 
         painter.setPen(QPen())
 
-        for x, date in self.visibleDays():
-            if date.day == 1:
-                for i, contact in enumerate(self.app.holidayModel.contactCache.viewvalues()):
-                    painter.drawText(QRect(x + 10, (15 + 25 + 15) * i + 15, self.columnWidth() * 20 - 10, 25), Qt.AlignVCenter, contact.name)
-
-        for holiday in self.app.holidayModel.holidayCache.viewvalues():
+        for holiday in self.app.holidayModel.holidayCache.values():
             startX = (holiday.start.toordinal() - EPOCH_ORDINAL - self.offset()) * self.columnWidth()
             endX = (holiday.end.toordinal() + 1 - EPOCH_ORDINAL - self.offset()) * self.columnWidth()
             y = self.app.holidayModel.contactCache.keys().index(holiday.contactId) * (15 + 25 + 15) + 15
 
             painter.setPen(QPen())
-            painter.setBrush(QBrush(QColor(255, 0, 0)))
-            painter.drawRect(QRect(startX, y, endX - startX, y + 25))
+            painter.setBrush(QBrush(self.app.green))
+            painter.drawRect(QRect(startX, y, endX - startX, 25))
+
+        for x, date in self.visibleDays():
+            if date.day == 1:
+                for i, contact in enumerate(self.app.holidayModel.contactCache.values()):
+                    painter.drawText(QRect(x + 10, (15 + 25 + 15) * i + 15, self.columnWidth() * 20 - 10, 25), Qt.AlignVCenter, contact.name)
 
         painter.end()
 
@@ -499,6 +499,17 @@ class CalendarPane(QScrollArea):
 
 
 class Application(QApplication):
+    def initColors(self):
+        self.white = QColor(255, 255, 255)
+        self.lightRed = QColor(242, 219, 219, 100)
+        self.orange = QColor(227, 108, 10)
+        self.green = QColor(118, 146, 60)
+        self.black = QColor(0, 0, 0)
+        self.blue = QColor(54, 95, 145)
+        self.yellow = QColor(255, 183, 0)
+        self.purple = QColor(95, 73, 122)
+        self.gray = QColor(191, 191, 191)
+        
     def initConfig(self):
         self.config = ConfigParser.ConfigParser()
         self.config.read(os.path.join(os.path.dirname(__file__), "config.ini"))
@@ -584,7 +595,7 @@ class HolidayModel(QObject):
         return len(self.contactCache)
 
     def data(self, row):
-        return self.contactCache.viewvalues()[row]
+        return self.contactCache.values()[row]
 
     def contactFromHandle(self, handle=getpass.getuser()):
         for contact in self.contactCache.viewvalues():
@@ -718,6 +729,14 @@ class HolidayDialog(QDialog):
         else:
             self.contactBox.setText(contact.name)
 
+        if self.holiday.id:
+            self.setWindowTitle("Urlaub eintragen")
+        else:
+            self.setWindowTitle("Urlaub: %s vom %s bis zum %s" % (
+                 contact.name,
+                 self.holiday.start.strftime("%d.%m.%Y"),
+                 self.holiday.end.strftime("%d.%m.")))
+
         self.startBox.setDate(qdate(self.holiday.start))
         self.endBox.setDate(qdate(self.holiday.end))
 
@@ -736,6 +755,7 @@ class HolidayDialog(QDialog):
 
 if __name__ == "__main__":
     app = Application(sys.argv)
+    app.initColors()
     app.initConfig()
     app.initDb()
     app.initModel()
