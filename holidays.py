@@ -629,6 +629,8 @@ class Application(QApplication):
     def initResources(self):
         self.dateIcon = QIcon(os.path.join(os.path.dirname(__file__), "date.ico"))
 
+        self.deleteIcon = QIcon(os.path.join(os.path.dirname(__file__), "bin_closed.png"))
+
     def initConfig(self):
         self.config = ConfigParser.ConfigParser()
         self.config.read(os.path.join(os.path.dirname(__file__), "config.ini"))
@@ -748,6 +750,16 @@ class HolidayModel(QObject):
 
         self.modelReset.emit()
 
+    def delete(self, holidayId):
+        del self.holidayCache[holidayId]
+
+        cursor = self.app.db.cursor()
+        cursor.execute("DELETE FROM holiday WHERE id = %(id)s", {
+            "id": holidayId,
+        })
+
+        self.modelReset.emit()
+
 
 class MainWindow(QMainWindow):
     def __init__(self, app):
@@ -850,10 +862,18 @@ class HolidayDialog(QDialog):
         self.confirmedBox = QCheckBox("Genehmigt")
         layout.addWidget(self.confirmedBox, 5, 1)
 
-        self.buttons = QDialogButtonBox(QDialogButtonBox.Cancel | QDialogButtonBox.Save)
-        self.buttons.accepted.connect(self.onAccept)
-        self.buttons.rejected.connect(self.reject)
-        layout.addWidget(self.buttons, 6, 0, 1, 2)
+        hbox = QHBoxLayout()
+        self.deleteButton = QPushButton(self.app.deleteIcon, u"Löschen")
+        self.deleteButton.clicked.connect(self.onDeleteClicked)
+        hbox.addWidget(self.deleteButton, 0)
+        hbox.addSpacing(1)
+        self.cancelButton = QPushButton("Abbrechen")
+        self.cancelButton.clicked.connect(self.reject)
+        hbox.addWidget(self.cancelButton, 0)
+        self.saveButton = QPushButton("Speichern")
+        self.saveButton.clicked.connect(self.onAccept)
+        hbox.addWidget(self.saveButton, 0)
+        layout.addLayout(hbox, 6, 0, 1, 2)
 
     def onStartDateChanged(self, date):
         self.endBox.setMinimumDate(date)
@@ -897,6 +917,12 @@ class HolidayDialog(QDialog):
         self.holiday.confirmed = self.confirmedBox.isChecked()
         self.app.holidayModel.save(self.holiday)
         self.accept()
+
+    def onDeleteClicked(self):
+        if self.holiday.id:
+            self.app.holidayModel.delete(self.holiday.id)
+
+        self.reject()
 
 
 class TypeComboBox(QComboBox):
