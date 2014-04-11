@@ -379,7 +379,7 @@ class CalendarBody(CalendarStrip):
         for holiday in self.app.holidayModel.holidayCache.viewvalues():
             startX = (holiday.start.toordinal() - EPOCH_ORDINAL - self.offset()) * self.columnWidth()
             endX = (holiday.end.toordinal() + 1 - EPOCH_ORDINAL - self.offset()) * self.columnWidth()
-            y = self.app.contactCache.keys().index(holiday.contactId()) * (15 + 25 + 15) + 15
+            y = self.app.holidayModel.contactCache.keys().index(holiday.contactId) * (15 + 25 + 15) + 15
 
             painter.setPen(QPen())
             painter.setBrush(QBrush(QColor(255, 0, 0)))
@@ -529,6 +529,7 @@ class Holiday(object):
     def __init__(self, app):
         self.app = app
 
+        self.id = None
         self.contactId = None
         self.type = 0
         self.confirmed = False
@@ -587,7 +588,6 @@ class HolidayModel(QObject):
 
     def contactFromHandle(self, handle=getpass.getuser()):
         for contact in self.contactCache.viewvalues():
-            print contact.handle
             if contact.handle == handle:
                 return contact
 
@@ -607,8 +607,8 @@ class HolidayModel(QObject):
             record["id"] = holiday.id
             cursor.execute("UPDATE holiday SET contact_id = %(contact_id)s, type = %(type)s, confirmed = %(confirmed)s, start = %(start)s, end = %(end)s, comment = %(comment)s WHERE id = %(id)s", record)
         else:
-            cursor.execute("INSERT INTO holiday (contact_id, type, confirmed, start, end, comment) VALUES (%(contact_id)s, %(type)s, %(confirmed)s, %(start)s, %(end)s, %(comment)s)")
-            holiday.id = cursor.lastrowid()
+            cursor.execute("INSERT INTO holiday (contact_id, type, confirmed, start, end, comment) VALUES (%(contact_id)s, %(type)s, %(confirmed)s, %(start)s, %(end)s, %(comment)s)", record)
+            holiday.id = cursor.lastrowid
             self.holidayCache[holiday.id] = holiday
 
         self.modelReset.emit()
@@ -689,11 +689,11 @@ class HolidayDialog(QDialog):
         self.contactBox.setOpenExternalLinks(True)
         layout.addWidget(self.contactBox, 0, 1)
 
-        layout.addWidget(QLabel("Beginn:"), 1, 0)
+        layout.addWidget(QLabel("Beginn:"), 1, 0, Qt.AlignLeft)
         self.startBox = QDateEdit()
         layout.addWidget(self.startBox, 1, 1)
         
-        layout.addWidget(QLabel("Ende:"), 2, 0)
+        layout.addWidget(QLabel("Ende:"), 2, 0, Qt.AlignLeft)
         self.endBox = QDateEdit()
         layout.addWidget(self.endBox, 2, 1)
         
@@ -731,6 +731,7 @@ class HolidayDialog(QDialog):
         self.holiday.comment = self.commentBox.toPlainText()
         self.holiday.confirmed = self.confirmedBox.isChecked()
         self.app.holidayModel.save(self.holiday)
+        self.accept()
 
 
 if __name__ == "__main__":
