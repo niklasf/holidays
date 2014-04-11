@@ -335,21 +335,27 @@ class CalendarHeader(CalendarStrip):
 
 
 class CalendarBody(CalendarStrip):
+
+    holidayClicked = Signal(int)
+
     def __init__(self, app, parent=None):
         super(CalendarBody, self).__init__(parent)
         self.app = app
         self.setMouseTracking(True)
 
         self.mousePos = None
+        self.mousePressPos = None
 
         self.app.holidayModel.modelReset.connect(self.update)
 
     def paintEvent(self, event):
         painter = QPainter(self)
+
+        # Fill background.
         painter.fillRect(self.rect(), QBrush(self.app.white))
 
+        # Paint rows.
         painter.setPen(QPen(self.app.gray))
-
         for i in xrange(self.app.holidayModel.rowCount()):
             painter.drawLine(0, (15 + 25 + 15) * i + 15,
                 self.width(), (15 + 25 + 15) * i + 15)
@@ -359,29 +365,36 @@ class CalendarBody(CalendarStrip):
         for x, date in self.visibleDays():
             rect = QRect(x, 0, self.columnWidth(), self.height())
 
+            # Paint columns.
             if date.day == 1:
                 painter.setPen(QPen())
             else:
                 painter.setPen(QPen(self.app.gray))
-
             painter.drawLine(x, 0, x, self.height())
 
+            # Highlight national holidays.
             if is_holiday(date):
                 painter.fillRect(rect, QBrush(self.app.lightRed))
 
+            # Gray out the past.
             if date < datetime.date.today():
                 painter.fillRect(rect, QBrush(Qt.Dense7Pattern))
 
         painter.setPen(QPen())
 
+        # Draw holidays.
         for holiday, rect in self.visibleHolidays():
             painter.setPen(QPen())
             if self.mousePos and rect.contains(self.mousePos):
-                painter.setBrush(QBrush(self.app.green.lighter(110)))
+                if self.mousePressPos:
+                    painter.setBrush(QBrush(self.app.green.lighter(90)))
+                else:
+                    painter.setBrush(QBrush(self.app.green.lighter(110)))
             else:
                 painter.setBrush(QBrush(self.app.green))
             painter.drawRect(rect)
 
+        # Draw names.
         for x, date in self.visibleDays():
             if date.day == 1:
                 for i, contact in enumerate(self.app.holidayModel.contactCache.values()):
@@ -399,6 +412,18 @@ class CalendarBody(CalendarStrip):
     def leaveEvent(self, event):
         self.mousePos = None
         self.update()
+
+    def mousePressEvent(self, event):
+        self.mousePressPos = event.pos()
+        self.update()
+
+    def mouseReleaseEvent(self, event):
+        self.mousePressPos = None
+        self.update()
+
+        for holiday, rect in self.visibleHolidays():
+            if rect.contains(event.pos()):
+                self.holidayClicked.emit(holiday.id)
 
     def visibleHolidays(self):
         for holiday in self.app.holidayModel.holidayCache.values():
@@ -420,6 +445,8 @@ class CalendarPane(QScrollArea):
         self.setViewportMargins(0, 80, 0, 0)
         self.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
 
+        self.app.holidayModel.modelReset.connect(self.updateWidgetSizes)
+
         today = datetime.date.today()
         self.offset = datetime.date(today.year, today.month, 1).toordinal() - EPOCH_ORDINAL
 
@@ -431,6 +458,7 @@ class CalendarPane(QScrollArea):
 
         self.setWidget(CalendarBody(app, self))
         self.widget().setOffset(self.offset)
+        self.widget().holidayClicked.connect(self.onHolidayClicked)
 
         self.animation = VariantAnimation(self)
         self.animation.setEasingCurve(QEasingCurve(QEasingCurve.InOutQuad))
@@ -474,7 +502,15 @@ class CalendarPane(QScrollArea):
 
         self.animationEnabled = True
 
+    def onHolidayClicked(self, holidayId):
+        holiday = self.app.holidayModel.holidayCache[holidayId]
+        dialog = HolidayDialog(self.app, holiday, self)
+        dialog.show()
+
     def resizeEvent(self, event):
+        self.updateWidgetSizes()
+
+    def updateWidgetSizes(self):
         self.header.resize(self.width(), self.header.sizeHint().height())
         self.widget().resize(self.width(), max(self.widget().sizeHint().height(), self.height() - 80 - 5))
 
@@ -706,8 +742,8 @@ class HolidayDialog(QDialog):
         self.initUi()
         self.initValues()
 
-        self.setWindowTitle("Urlaub")
-
+        self.setWindowFlags(self.windowFlags() & ~Qt.WindowContextHelpButtonHint)
+        
     def initUi(self):
         layout = QGridLayout(self)
 
