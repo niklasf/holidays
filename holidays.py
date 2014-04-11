@@ -870,7 +870,7 @@ class MainWindow(QMainWindow):
         self.aboutQtAction =  QAction(u"Über Qt ...", self)
         self.aboutQtAction.triggered.connect(self.onAboutQtAction)
 
-        self.createHolidayAction = QAction("Neu", self)
+        self.createHolidayAction = QAction("Eintragen", self)
         self.createHolidayAction.setShortcut("Ctrl+N")
         self.createHolidayAction.triggered.connect(self.onCreateHolidayAction)
 
