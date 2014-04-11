@@ -13,11 +13,10 @@ class MessageQueue(QObject):
 
     received = Signal(int, str, str, str, str)
 
-    def __init__(self, db, logger):
+    def __init__(self, db):
         super(MessageQueue, self).__init__()
 
         self.db = db
-        self.logger = logger
         self.session = str(uuid.uuid4())
         self.queue = Queue.Queue()
 
@@ -45,7 +44,7 @@ class MessageQueue(QObject):
         """
         while True:
             try:
-                item = self.queue.get(True, 10)
+                item = self.queue.get(True, 2)
 
                 try:
                     cursor = self.db.cursor()
@@ -67,7 +66,6 @@ class MessageQueue(QObject):
                     })
 
                     for id, session, channel, message, extra in cursor:
-                        self.logger.debug("Received message: %d %s %s %s:%s" % (id, session, channel, message, extra))
                         self.received.emit(id, session, channel, message, extra)
                         self.last_id = id
                 except mysql.connector.Error:

@@ -652,7 +652,7 @@ class Application(QApplication):
         self.db = self.mysqlConnect()
 
     def initMessageQueue(self):
-        self.messageQueue = message_queue.MessageQueue(mysql.connect())
+        self.messageQueue = message_queue.MessageQueue(self.mysqlConnect())
 
     def initModel(self):
         self.holidayModel = HolidayModel(self)
