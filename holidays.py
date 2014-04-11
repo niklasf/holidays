@@ -573,7 +573,7 @@ class MainWindow(QMainWindow):
         self.aboutQtAction.triggered.connect(self.onAboutQtAction)
 
         self.createHolidayAction = QAction("Neu", self)
-        self.createHolidayAction.setShortcut("Ctrl + N")
+        self.createHolidayAction.setShortcut("Ctrl+N")
         self.createHolidayAction.triggered.connect(self.onCreateHolidayAction)
 
     def onAboutAction(self):
