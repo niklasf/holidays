@@ -813,6 +813,7 @@ class HolidayDialog(QDialog):
 
         layout.addWidget(QLabel("Beginn:"), 1, 0, Qt.AlignLeft)
         self.startBox = QDateEdit()
+        self.startBox.dateChanged.connect(self.onStartDateChanged)
         layout.addWidget(self.startBox, 1, 1)
         
         layout.addWidget(QLabel("Ende:"), 2, 0, Qt.AlignLeft)
@@ -831,6 +832,9 @@ class HolidayDialog(QDialog):
         self.buttons.accepted.connect(self.onAccept)
         self.buttons.rejected.connect(self.reject)
         layout.addWidget(self.buttons, 5, 0, 1, 2)
+
+    def onStartDateChanged(self, date):
+        self.endBox.setMinimumDate(date)
 
     def initValues(self):
         contact = self.holiday.contact()
