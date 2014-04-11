@@ -391,13 +391,13 @@ class CalendarBody(CalendarStrip):
         for holiday, rect in self.visibleHolidays():
             painter.setPen(QPen())
 
-            if holiday.type == 0 and holiday.confirmed:
+            if holiday.type == TYPE_HOLIDAY and holiday.confirmed:
                 color = self.app.green
-            elif holiday.type == 0 and not holiday.confirmed:
+            elif holiday.type == TYPE_HOLIDAY and not holiday.confirmed:
                 color = self.app.blue
-            elif holiday.type == 1:
+            elif holiday.type == TYPE_HEALTH:
                 color = self.app.orange
-            elif holiday.type == 2:
+            elif holiday.type == TYPE_BUSINESS_TRIP:
                 color = self.app.purple
 
             if self.mousePos and rect.contains(self.mousePos):
@@ -643,6 +643,11 @@ class Contact(object):
         self.email = None
         self.handle = None
 
+
+TYPE_HOLIDAY = 0
+TYPE_BUSINESS_TRIP = 1
+TYPE_HEALTH = 2
+
 class Holiday(object):
     def __init__(self, app):
         self.app = app
@@ -825,16 +830,26 @@ class HolidayDialog(QDialog):
         layout.addWidget(self.commentBox, 3, 1)
         
         layout.addWidget(QLabel("Typ:"), 4, 0)
+        self.typeBox = TypeComboBox(self.app)
+        self.typeBox.currentIndexChanged.connect(self.onTypeChanged)
+        layout.addWidget(self.typeBox, 4, 1)
         self.confirmedBox = QCheckBox("Genehmigt")
-        layout.addWidget(self.confirmedBox, 4, 1)
+        layout.addWidget(self.confirmedBox, 5, 1)
 
         self.buttons = QDialogButtonBox(QDialogButtonBox.Cancel | QDialogButtonBox.Save)
         self.buttons.accepted.connect(self.onAccept)
         self.buttons.rejected.connect(self.reject)
-        layout.addWidget(self.buttons, 5, 0, 1, 2)
+        layout.addWidget(self.buttons, 6, 0, 1, 2)
 
     def onStartDateChanged(self, date):
         self.endBox.setMinimumDate(date)
+
+    def onTypeChanged(self, index):
+        if self.typeBox.type() == TYPE_HEALTH:
+            self.confirmedBox.setChecked(True)
+            self.confirmedBox.setEnabled(False)
+        else:
+            self.confirmedBox.setEnabled(True)
 
     def initValues(self):
         contact = self.holiday.contact()
@@ -857,15 +872,50 @@ class HolidayDialog(QDialog):
 
         self.commentBox.setText(self.holiday.comment)
 
+        self.typeBox.setType(self.holiday.type)
         self.confirmedBox.setChecked(self.holiday.confirmed)
 
     def onAccept(self):
         self.holiday.start = pydate(self.startBox.date())
         self.holiday.end = pydate(self.endBox.date())
         self.holiday.comment = self.commentBox.toPlainText()
+        self.holiday.type = self.typeBox.type()
         self.holiday.confirmed = self.confirmedBox.isChecked()
         self.app.holidayModel.save(self.holiday)
         self.accept()
+
+
+class TypeComboBox(QComboBox):
+    def __init__(self, app, parent=None):
+        super(TypeComboBox, self).__init__(parent)
+        self.app = app
+
+        self.addItem("Urlaub", TYPE_HOLIDAY)
+        self.addItem("Dienstreise", TYPE_BUSINESS_TRIP)
+        self.addItem("Krankheit", TYPE_HEALTH)
+
+        for row, color in enumerate([self.app.green, self.app.purple, self.app.orange]):
+            index = self.model().index(row, 0)
+            self.model().setData(index, color, Qt.BackgroundRole)
+            self.model().setData(index, contrasting_color(color), Qt.ForegroundRole)
+
+    def type(self):
+        if self.currentIndex() == 0:
+            return TYPE_HOLIDAY
+        elif self.currentIndex() == 1:
+            return TYPE_BUSINESS_TRIP
+        elif self.currentIndex() == 2:
+            return TYPE_HEALTH
+
+    def setType(self, type):
+        if type == TYPE_HOLIDAY:
+            self.setCurrentIndex(0)
+        elif type == TYPE_BUSINESS_TRIP:
+            self.setCurrentIndex(1)
+        elif type == TYPE_HEALTH:
+            self.setCurrentIndex(2)
+        else:
+            self.setCurrentIndex(-1)
 
 
 if __name__ == "__main__":
