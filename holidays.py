@@ -427,6 +427,12 @@ class CalendarBody(CalendarStrip):
             painter.drawLine(0, (15 + 25 + 15) * i + 15 + 25,
                 self.width(), (15 + 25 + 15) * i + 15 + 25)
 
+        # Calculate hovered day.
+        if self.mousePos:
+            hoveredDate = datetime.date.fromordinal(int(self.offset() + self.mousePos.x() / self.columnWidth()) + EPOCH_ORDINAL)
+        else:
+            hoveredDate = None
+
         for x, date in self.visibleDays():
             rect = QRect(x, 0, self.columnWidth(), self.height())
 
@@ -436,6 +442,10 @@ class CalendarBody(CalendarStrip):
             else:
                 painter.setPen(QPen(self.app.gray))
             painter.drawLine(x, 0, x, self.height())
+
+            # Highlight hovered day.
+            if date == hoveredDate:
+                painter.fillRect(rect, QBrush(QColor(220, 220, 220, 100)))
 
             # Draw overlays.
             for overlay in self.overlays:
