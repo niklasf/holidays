@@ -841,7 +841,7 @@ class MainWindow(QMainWindow):
         mainMenu.addAction(self.aboutAction)
         mainMenu.addAction(self.aboutQtAction)
 
-        holidaysMenu = self.menuBar().addMenu("Urlaube")
+        holidaysMenu = self.menuBar().addMenu("Urlaub")
         holidaysMenu.addAction(self.createHolidayAction)
 
     def sizeHint(self):
