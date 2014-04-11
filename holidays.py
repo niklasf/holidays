@@ -344,6 +344,30 @@ class CalendarHeader(CalendarStrip):
         return QSize(40 * 25, 80)
 
 
+class HolidayOverlay(object):
+    def __init__(self, app):
+        self.app = app
+        self._brush = QBrush(self.app.lightRed)
+
+    def brush(self):
+        return self._brush
+
+    def matches(self, date):
+        return is_holiday(date)
+
+
+def PastOverlay(object):
+    def __init__(self, app):
+        self.app = app
+        self._brush = QBrush(Qt.Dense7Pattern)
+
+    def brush(self):
+        return self._brush
+
+    def matches(self, date):
+        return date < datetime.date.today
+
+
 class CalendarBody(CalendarStrip):
 
     holidayClicked = Signal(int)
@@ -354,6 +378,8 @@ class CalendarBody(CalendarStrip):
         super(CalendarBody, self).__init__(parent)
         self.app = app
         self.setMouseTracking(True)
+
+        self.overlays = [HolidayOverlay(self.app), PastOverlay(self.app)]
 
         self.setContextMenuPolicy(Qt.CustomContextMenu)
         self.customContextMenuRequested.connect(self.onCustomContextMenuRequested)
@@ -387,13 +413,10 @@ class CalendarBody(CalendarStrip):
                 painter.setPen(QPen(self.app.gray))
             painter.drawLine(x, 0, x, self.height())
 
-            # Highlight national holidays.
-            if is_holiday(date):
-                painter.fillRect(rect, QBrush(self.app.lightRed))
-
-            # Gray out the past.
-            if date < datetime.date.today():
-                painter.fillRect(rect, QBrush(Qt.Dense7Pattern))
+            # Draw overlays.
+            for overlay in self.overlays:
+                if overlay.matches(date):
+                    painter.fillRect(rect, overlay.brush())
 
         painter.setPen(QPen())
 
