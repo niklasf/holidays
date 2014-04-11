@@ -24,6 +24,7 @@ EPOCH_ORDINAL = 719163
 MONTH_NAMES = ["Dezember", "Januar", "Februar", u"März", "April", "Mai", "Juni",
                "Juli", "August", "September", "November", "Oktober", "Dezember"]
 
+
 def map_pixel(pixmap, mapper):
     image = pixmap.toImage()
 
@@ -43,14 +44,17 @@ def darker(r, g, b, a):
     color = QColor(r, g, b, a).lighter(90)
     return color.red(), color.green(), color.blue(), color.alpha()
 
+
 def days_of_month(year, month):
     return calendar.monthrange(year, month)[1]
+
 
 def qdate(d):
     return None if d is None else QDate(d.year, d.month, d.day)
 
 def pydate(qd):
     return None if qd is None else datetime.date(qd.year(), qd.month(), qd.day())
+
 
 def easter_sunday(year):
     g = year % 19
@@ -64,6 +68,7 @@ def easter_sunday(year):
     else:
         return QDate(year, month, day)
 
+
 HOLIDAY_NONE = 0
 HOLIDAY_NEWYEAR = 1
 HOLIDAY_GOOD_FRIDAY = 2
@@ -75,7 +80,7 @@ HOLIDAY_TAG_DER_DEUTSCHEN_EINHEIT = 64
 HOLIDAY_CHRISTMAS = 128
 HOLIDAY_WEEKEND = 256
 
-def holiday(date):
+def is_holiday(date):
     holiday = HOLIDAY_NONE
 
     easter = easter_sunday(date.year)
@@ -104,6 +109,7 @@ def holiday(date):
 
     return holiday
 
+
 class CalendarStrip(QWidget):
     def __init__(self, parent=None):
         super(CalendarStrip, self).__init__(parent)
@@ -129,6 +135,7 @@ class CalendarStrip(QWidget):
 
     def currentDate(self):
         return datetime.date.fromordinal(int(self._offset) + EPOCH_ORDINAL)
+
 
 class CalendarHeader(CalendarStrip):
 
@@ -326,10 +333,13 @@ class CalendarHeader(CalendarStrip):
     def sizeHint(self):
         return QSize(40 * 25, 80)
 
+
 class CalendarBody(CalendarStrip):
     def __init__(self, app, parent=None):
         super(CalendarBody, self).__init__(parent)
         self.app = app
+
+        self.app.holidayModel.modelReset.connect(self.update)
 
     def paintEvent(self, event):
         painter = QPainter(self)
@@ -353,7 +363,7 @@ class CalendarBody(CalendarStrip):
 
             painter.drawLine(x, 0, x, self.height())
 
-            if holiday(date):
+            if is_holiday(date):
                 painter.fillRect(rect, QBrush(QColor(250, 220, 200, 100)))
 
             if date < datetime.date.today():
@@ -366,14 +376,25 @@ class CalendarBody(CalendarStrip):
                 for i, contact in enumerate(self.app.holidayModel.contactCache.viewvalues()):
                     painter.drawText(QRect(x + 10, (15 + 25 + 15) * i + 15, self.columnWidth() * 20 - 10, 25), Qt.AlignVCenter, contact.name)
 
+        for holiday in self.app.holidayModel.holidayCache.viewvalues():
+            startX = (holiday.start.toordinal() - EPOCH_ORDINAL - self.offset()) * self.columnWidth()
+            endX = (holiday.end.toordinal() + 1 - EPOCH_ORDINAL - self.offset()) * self.columnWidth()
+            y = self.app.contactCache.keys().index(holiday.contactId()) * (15 + 25 + 15) + 15
+
+            painter.setPen(QPen())
+            painter.setBrush(QBrush(QColor(255, 0, 0)))
+            painter.drawRect(QRect(startX, y, endX - startX, y + 25))
+
         painter.end()
 
     def sizeHint(self):
         return QSize(40 * 25, self.app.holidayModel.rowCount() * (15 + 25 + 15))
 
+
 class VariantAnimation(QVariantAnimation):
     def updateCurrentValue(self, value):
         pass
+
 
 class CalendarPane(QScrollArea):
     def __init__(self, app, parent=None):
@@ -476,6 +497,7 @@ class CalendarPane(QScrollArea):
 
         return super(CalendarPane, self).eventFilter(watched, event)
 
+
 class Application(QApplication):
     def initConfig(self):
         self.config = ConfigParser.ConfigParser()
@@ -492,6 +514,7 @@ class Application(QApplication):
     def initModel(self):
         self.holidayModel = HolidayModel(self)
         self.holidayModel.reload()
+
 
 class Contact(object):
     def __init__(self, app):
@@ -516,6 +539,7 @@ class Holiday(object):
     def contact(self):
         return self.app.holidayModel.contactCache[self.contactId]
 
+
 class HolidayModel(QObject):
 
     modelReset = Signal()
@@ -525,9 +549,11 @@ class HolidayModel(QObject):
         self.app = app
 
         self.contactCache = indexed.IndexedOrderedDict()
+        self.holidayCache = indexed.IndexedOrderedDict()
 
     def reload(self):
         self.contactCache.clear()
+        self.holidayCache.clear()
 
         cursor = self.app.db.cursor()
         cursor.execute("SELECT contact_id, firstname, name, email, login_id FROM contact WHERE department = 18 OR login_id = '10179939' ORDER BY name ASC")
@@ -538,6 +564,18 @@ class HolidayModel(QObject):
             contact.email = record[3]
             contact.handle = record[4]
             self.contactCache[contact.id] = contact
+
+        cursor.execute("SELECT id, contact_id, type, confirmed, start, end, comment FROM holiday")
+        for record in cursor:
+            holiday = Holiday(self.app)
+            holiday.id = record[0]
+            holiday.contactId = record[1]
+            holiday.type = record[2]
+            holiday.confirmed = record[3]
+            holiday.start = record[4]
+            holiday.end = record[5]
+            holiday.comment = record[6]
+            self.holidayCache[holiday.id] = holiday
 
         self.modelReset.emit()
 
@@ -552,6 +590,29 @@ class HolidayModel(QObject):
             print contact.handle
             if contact.handle == handle:
                 return contact
+
+    def save(self, holiday):
+        record = {
+            "contact_id": holiday.contactId,
+            "type": holiday.type,
+            "confirmed": holiday.confirmed,
+            "start": holiday.start,
+            "end": holiday.end,
+            "comment": holiday.comment
+        }
+
+        cursor = self.app.db.cursor()
+
+        if holiday.id:
+            record["id"] = holiday.id
+            cursor.execute("UPDATE holiday SET contact_id = %(contact_id)s, type = %(type)s, confirmed = %(confirmed)s, start = %(start)s, end = %(end)s, comment = %(comment)s WHERE id = %(id)s", record)
+        else:
+            cursor.execute("INSERT INTO holiday (contact_id, type, confirmed, start, end, comment) VALUES (%(contact_id)s, %(type)s, %(confirmed)s, %(start)s, %(end)s, %(comment)s)")
+            holiday.id = cursor.lastrowid()
+            self.holidayCache[holiday.id] = holiday
+
+        self.modelReset.emit()
+
 
 class MainWindow(QMainWindow):
     def __init__(self, app):
@@ -589,6 +650,8 @@ class MainWindow(QMainWindow):
             return
 
         holiday = Holiday(self.app)
+        holiday.start = datetime.date.today()
+        holiday.end = datetime.date.today()
         holiday.contactId = self.app.holidayModel.contactFromHandle().id
 
         dialog = HolidayDialog(self.app, holiday, self)
@@ -604,6 +667,7 @@ class MainWindow(QMainWindow):
 
     def sizeHint(self):
         return QSize(900, 600)
+
 
 class HolidayDialog(QDialog):
     def __init__(self, app, holiday, parent=None):
@@ -642,6 +706,8 @@ class HolidayDialog(QDialog):
         layout.addWidget(self.confirmedBox, 4, 1)
 
         self.buttons = QDialogButtonBox(QDialogButtonBox.Cancel | QDialogButtonBox.Save)
+        self.buttons.accepted.connect(self.onAccept)
+        self.buttons.rejected.connect(self.reject)
         layout.addWidget(self.buttons, 5, 0, 1, 2)
 
     def initValues(self):
@@ -651,6 +717,20 @@ class HolidayDialog(QDialog):
                     (contact.email, contact.name, contact.email))
         else:
             self.contactBox.setText(contact.name)
+
+        self.startBox.setDate(qdate(self.holiday.start))
+        self.endBox.setDate(qdate(self.holiday.end))
+
+        self.commentBox.setText(self.holiday.comment)
+
+        self.confirmedBox.setChecked(self.holiday.confirmed)
+
+    def onAccept(self):
+        self.holiday.start = pydate(self.startBox.date())
+        self.holiday.end = pydate(self.endBox.date())
+        self.holiday.comment = self.commentBox.toPlainText()
+        self.holiday.confirmed = self.confirmedBox.isChecked()
+        self.app.holidayModel.save(self.holiday)
 
 
 if __name__ == "__main__":
