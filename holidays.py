@@ -923,7 +923,7 @@ class HolidayDialog(QDialog):
     def onDeleteClicked(self):
         if self.holiday.id:
             if QMessageBox.Yes == QMessageBox.question(self, self.windowTitle(),
-                                                       u"Diesen Eintrag wirklich löschen?",
+                                                       u"Diesen Kalendereintrag wirklich löschen?",
                                                        QMessageBox.Yes | QMessageBox.No):
                 self.app.holidayModel.delete(self.holiday.id)
                 self.reject()
