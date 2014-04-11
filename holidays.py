@@ -926,8 +926,9 @@ class HolidayDialog(QDialog):
                                                        u"Diesen Eintrag wirklich löschen?",
                                                        QMessageBox.Yes | QMessageBox.No):
                 self.app.holidayModel.delete(self.holiday.id)
-
-        self.reject()
+                self.reject()
+        else:
+            self.reject()
 
 
 class TypeComboBox(QComboBox):
