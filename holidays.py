@@ -365,7 +365,7 @@ class PastOverlay(object):
         return self._brush
 
     def matches(self, date):
-        return date < datetime.date.today
+        return date < datetime.date.today()
 
 
 class CalendarBody(CalendarStrip):
