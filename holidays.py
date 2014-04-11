@@ -146,6 +146,9 @@ class CalendarStrip(QWidget):
     def currentDate(self):
         return datetime.date.fromordinal(int(self._offset) + EPOCH_ORDINAL)
 
+    def dateFromX(self, x):
+        return datetime.date.fromordinal(int(self._offset + EPOCH_ORDINAL + x / self.columnWidth()))
+
 
 class CalendarHeader(CalendarStrip):
 
@@ -398,6 +401,8 @@ class CalendarBody(CalendarStrip):
 
     dayClicked = Signal(int)
 
+    dayRangeSelected = Signal(int, int)
+
     def __init__(self, app, parent=None):
         super(CalendarBody, self).__init__(parent)
         self.app = app
@@ -413,6 +418,7 @@ class CalendarBody(CalendarStrip):
 
         self.app.holidayModel.modelReset.connect(self.update)
 
+
     def paintEvent(self, event):
         painter = QPainter(self)
 
@@ -427,9 +433,15 @@ class CalendarBody(CalendarStrip):
             painter.drawLine(0, (15 + 25 + 15) * i + 15 + 25,
                 self.width(), (15 + 25 + 15) * i + 15 + 25)
 
+        # Calculate drag start day.
+        if self.mousePressPos:
+            dragStartDate = self.dateFromX(self.mousePressPos.x())
+        else:
+            dragStartDate = None
+
         # Calculate hovered day.
         if self.mousePos:
-            hoveredDate = datetime.date.fromordinal(int(self.offset() + self.mousePos.x() / self.columnWidth()) + EPOCH_ORDINAL)
+            hoveredDate = self.dateFromX(self.mousePos.x())
         else:
             hoveredDate = None
 
@@ -444,7 +456,7 @@ class CalendarBody(CalendarStrip):
             painter.drawLine(x, 0, x, self.height())
 
             # Highlight hovered day.
-            if date == hoveredDate:
+            if date == hoveredDate or (dragStartDate and hoveredDate and date >= min(hoveredDate, dragStartDate) and date <= max(hoveredDate, dragStartDate)):
                 painter.fillRect(rect, QBrush(QColor(220, 220, 220, 100)))
 
             # Draw overlays.
@@ -503,14 +515,26 @@ class CalendarBody(CalendarStrip):
             self.update()
 
     def mouseReleaseEvent(self, event):
-        self.mousePressPos = None
-
         if event.button() == Qt.LeftButton:
-            self.update()
+            dateTwo = self.dateFromX(event.pos().x())
+            if self.mousePressPos:
+                dateOne = self.dateFromX(self.mousePressPos.x())
+            else:
+                dateOne = dateTwo
 
-            for holiday, rect in self.visibleHolidays():
-                if rect.contains(event.pos()):
-                    self.holidayClicked.emit(holiday.id)
+            dragStartDate = min(dateOne, dateTwo)
+            dragEndDate = max(dateOne, dateTwo)
+
+            if dragStartDate == dragEndDate:
+                for holiday, rect in self.visibleHolidays():
+                    if rect.contains(event.pos()):
+                        self.holidayClicked.emit(holiday.id)
+                        holidayFound = True
+            else:
+                self.dayRangeSelected.emit(dragStartDate.toordinal() - EPOCH_ORDINAL, dragEndDate.toordinal() - EPOCH_ORDINAL)
+
+        self.update()
+        self.mousePressPos = None
 
     def mouseDoubleClickEvent(self, event):
         for holiday, rect in self.visibleHolidays():
@@ -573,6 +597,7 @@ class CalendarPane(QScrollArea):
         self.widget().setOffset(self.offset)
         self.widget().holidayClicked.connect(self.onHolidayClicked)
         self.widget().dayClicked.connect(self.onDayClicked)
+        self.widget().dayRangeSelected.connect(self.onDayRangeSelected)
 
         self.animation = VariantAnimation(self)
         self.animation.setEasingCurve(QEasingCurve(QEasingCurve.InOutQuad))
@@ -616,23 +641,26 @@ class CalendarPane(QScrollArea):
 
         self.animationEnabled = True
 
+    def onDayRangeSelected(self, startOffset, endOffset):
+        if not self.app.holidayModel.contactFromHandle():
+            QMessageBox.warning(self, "Urlaubsplaner", u"Sie (%s) können keinen Urlaub eintragen, da Sie nicht in der Kontakttabelle verzeichnet sind." % getpass.getuser())
+            return
+
+        holiday = Holiday(self.app)
+        holiday.start = datetime.date.fromordinal(startOffset + EPOCH_ORDINAL)
+        holiday.end = datetime.date.fromordinal(endOffset + EPOCH_ORDINAL)
+        holiday.contactId = self.app.holidayModel.contactFromHandle().id
+
+        dialog = HolidayDialog(self.app, holiday, self)
+        dialog.show()
+
     def onHolidayClicked(self, holidayId):
         holiday = self.app.holidayModel.holidayCache[holidayId]
         dialog = HolidayDialog(self.app, holiday, self)
         dialog.show()
 
     def onDayClicked(self, offset):
-        if not self.app.holidayModel.contactFromHandle():
-            QMessageBox.warning(self, "Urlaubsplaner", u"Sie (%s) können keinen Urlaub eintragen, da Sie nicht in der Kontakttabelle verzeichnet sind." % getpass.getuser())
-            return
-
-        holiday = Holiday(self.app)
-        holiday.start = datetime.date.fromordinal(offset + EPOCH_ORDINAL)
-        holiday.end = datetime.date.fromordinal(offset + EPOCH_ORDINAL + 7)
-        holiday.contactId = self.app.holidayModel.contactFromHandle().id
-
-        dialog = HolidayDialog(self.app, holiday, self)
-        dialog.show()
+        self.onDayRangeSelected(offset, offset + 7)
 
     def resizeEvent(self, event):
         self.updateWidgetSizes()
