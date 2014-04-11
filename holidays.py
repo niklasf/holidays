@@ -338,6 +338,9 @@ class CalendarBody(CalendarStrip):
     def __init__(self, app, parent=None):
         super(CalendarBody, self).__init__(parent)
         self.app = app
+        self.setMouseTracking(True)
+
+        self.mousePos = None
 
         self.app.holidayModel.modelReset.connect(self.update)
 
@@ -371,14 +374,13 @@ class CalendarBody(CalendarStrip):
 
         painter.setPen(QPen())
 
-        for holiday in self.app.holidayModel.holidayCache.values():
-            startX = (holiday.start.toordinal() - EPOCH_ORDINAL - self.offset()) * self.columnWidth()
-            endX = (holiday.end.toordinal() + 1 - EPOCH_ORDINAL - self.offset()) * self.columnWidth()
-            y = self.app.holidayModel.contactCache.keys().index(holiday.contactId) * (15 + 25 + 15) + 15
-
+        for holiday, rect in self.visibleHolidays():
             painter.setPen(QPen())
-            painter.setBrush(QBrush(self.app.green))
-            painter.drawRect(QRect(startX, y, endX - startX, 25))
+            if self.mousePos and rect.contains(self.mousePos):
+                painter.setBrush(QBrush(self.app.green.lighter(110)))
+            else:
+                painter.setBrush(QBrush(self.app.green))
+            painter.drawRect(rect)
 
         for x, date in self.visibleDays():
             if date.day == 1:
@@ -389,6 +391,21 @@ class CalendarBody(CalendarStrip):
 
     def sizeHint(self):
         return QSize(40 * 25, self.app.holidayModel.rowCount() * (15 + 25 + 15))
+
+    def mouseMoveEvent(self, event):
+        self.mousePos = event.pos()
+        self.update()
+
+    def leaveEvent(self, event):
+        self.mousePos = None
+        self.update()
+
+    def visibleHolidays(self):
+        for holiday in self.app.holidayModel.holidayCache.values():
+            startX = (holiday.start.toordinal() - EPOCH_ORDINAL - self.offset()) * self.columnWidth()
+            endX = (holiday.end.toordinal() + 1 - EPOCH_ORDINAL - self.offset()) * self.columnWidth()
+            y = self.app.holidayModel.contactCache.keys().index(holiday.contactId) * (15 + 25 + 15) + 15
+            yield holiday, QRect(startX, y, endX - startX, 25)
 
 
 class VariantAnimation(QVariantAnimation):
