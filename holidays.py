@@ -1055,6 +1055,7 @@ class HolidayDialog(QDialog):
 
         self.initUi()
         self.initValues()
+        self.onEndHalfDayBoxStatusMightHaveToChange()
 
         self.setWindowIcon(self.app.dateIcon)
         self.setWindowFlags(self.windowFlags() & ~Qt.WindowContextHelpButtonHint)
@@ -1072,14 +1073,17 @@ class HolidayDialog(QDialog):
         hbox = QHBoxLayout()
         self.startBox = QDateEdit()
         self.startBox.dateChanged.connect(self.onStartDateChanged)
+        self.startBox.dateChanged.connect(self.onEndHalfDayBoxStatusMightHaveToChange)
         hbox.addWidget(self.startBox)
         self.startHalfDayBox = QCheckBox("halber Tag")
+        self.startHalfDayBox.clicked.connect(self.onEndHalfDayBoxStatusMightHaveToChange)
         hbox.addWidget(self.startHalfDayBox)
         layout.addLayout(hbox, 1, 1)
 
         layout.addWidget(QLabel("Ende:"), 2, 0, Qt.AlignLeft)
         hbox = QHBoxLayout()
         self.endBox = QDateEdit()
+        self.endBox.dateChanged.connect(self.onEndHalfDayBoxStatusMightHaveToChange)
         hbox.addWidget(self.endBox)
         self.endHalfDayBox = QCheckBox("halber Tag")
         hbox.addWidget(self.endHalfDayBox)
@@ -1113,6 +1117,13 @@ class HolidayDialog(QDialog):
 
     def onStartDateChanged(self, date):
         self.endBox.setMinimumDate(date)
+
+    def onEndHalfDayBoxStatusMightHaveToChange(self):
+        if self.startHalfDayBox.isChecked() and self.startBox.date() == self.endBox.date():
+            self.endHalfDayBox.setChecked(False)
+            self.endHalfDayBox.setEnabled(False)
+        else:
+            self.endHalfDayBox.setEnabled(True)
 
     def onTypeChanged(self, index):
         if self.typeBox.type() == TYPE_HEALTH:
