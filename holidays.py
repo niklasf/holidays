@@ -263,6 +263,7 @@ class CalendarHeader(CalendarStrip):
         painter = QPainter(self)
 
         opt = QStyleOptionHeader()
+        opt.state = QStyle.State_Enabled | QStyle.State_Raised
         opt.textAlignment = Qt.AlignCenter
 
         for xStart, date in self.visibleDays():
