@@ -378,15 +378,39 @@ class SchoolHolidays(object):
 
     def matches(self, date):
         # Sommerferien 2014.
-        if datetime.date(2014, 7, 31) <= date and date <= datetime.date(2014, 9, 10):
+        if datetime.date(2014, 7, 31) <= date <= datetime.date(2014, 9, 10):
             return True
 
         # Herbstferien 2014.
-        if datetime.date(2014, 10, 27) <= date and date <= datetime.date(2014, 11, 8):
+        if datetime.date(2014, 10, 27) <= date <= datetime.date(2014, 11, 8):
             return True
 
         # Weichnatsferien 2014.
-        if datetime.date(2014, 12, 22) <= date and date <= datetime.date(2015, 1, 5):
+        if datetime.date(2014, 12, 22) <= date <= datetime.date(2015, 1, 5):
+            return True
+
+        # Winterferien 2015.
+        if datetime.date(2015, 2, 2) <= date <= datetime.date(2015, 2, 3):
+            return True
+
+        # Osterferien 2015.
+        if datetime.date(2015, 3, 25) <= date <= datetime.date(2015, 4, 10):
+            return True
+
+        # Pfingsferien 2015.
+        if datetime.date(2015, 5, 15) <= date <= datetime.date(2015, 5, 26):
+            return True
+
+        # Sommerferien 2015.
+        if datetime.date(2015, 7, 23) <= date <= datetime.date(2015, 9, 2):
+            return True
+
+        # Herbstferien 2015.
+        if datetime.date(2015, 10, 19) <= date <= datetime.date(2015, 10, 31):
+            return True
+
+        # Weihnachtsferien 2015.
+        if datetime.date(2015, 12, 23) <= date <= datetime.date(2016, 1, 6):
             return True
 
         return False
