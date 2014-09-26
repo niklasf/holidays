@@ -799,7 +799,9 @@ class Holiday(object):
         self.type = 0
         self.confirmed = False
         self.start = None
+        self.startHalfDay = False
         self.end = None
+        self.endHalfDay = False
         self.comment = ""
 
     def contact(self):
@@ -966,9 +968,9 @@ class MainWindow(QMainWindow):
 
                 # Heiligabend and Silvester count only half a day.
                 if day in (datetime.date(year, 12, 24), datetime.date(year, 12, 31)):
-                    if day == holiday.start and "half day start":
+                    if day == holiday.start and holiday.startHalfDay:
                         pass
-                    elif day == holiday.end and "half day end":
+                    elif day == holiday.end and holiday.endHalfDay:
                         pass
                     else:
                         secondHalfDays.add(day)
@@ -976,9 +978,9 @@ class MainWindow(QMainWindow):
                     continue
 
                 # Count.
-                if day == holiday.start and "half day start":
+                if day == holiday.start and holiday.startHalfDay:
                     secondHalfDays.add(day)
-                elif day == holiday.end and "half day end":
+                elif day == holiday.end and holiday.endHalfDay:
                     firstHalfDays.add(day)
                 else:
                     days.add(day)
