@@ -961,6 +961,11 @@ class MainWindow(QMainWindow):
 
             day = holiday.start
             while day <= holiday.end:
+                # Days out of the current year do not count.
+                if day.year != year:
+                    day = day + datetime.timedelta(days=1)
+                    continue
+
                 # National holidays do not count.
                 if is_holiday(day):
                     day = day + datetime.timedelta(days=1)
