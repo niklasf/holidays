@@ -878,7 +878,7 @@ class HolidayModel(QObject):
         else:
             cursor.execute("INSERT INTO holiday (contact_id, type, confirmed, start, end, comment) VALUES (%(contact_id)s, %(type)s, %(confirmed)s, %(start)s, %(end)s, %(comment)s)", record)
             holiday.id = cursor.lastrowid
-            
+
             self.app.messageQueue.publish("holiday", "insert", holiday.id)
 
         self.holidayCache[holiday.id] = holiday
