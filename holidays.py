@@ -559,7 +559,7 @@ class CalendarBody(CalendarStrip):
 
         for holiday, rect in self.visibleHolidays():
             if rect.contains(pos):
-                contextMenu.addAction("Bearbeiten (%d)" % holiday.id, lambda: self.holidayClicked.emit(holiday.id))
+                contextMenu.addAction("Bearbeiten (%d)" % holiday.id, lambda id=holiday.id: self.holidayClicked.emit(id))
 
         contextMenu.exec_(self.mapToGlobal(pos))
 
