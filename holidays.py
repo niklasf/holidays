@@ -835,7 +835,7 @@ class HolidayModel(QObject):
             contact.handle = record[4]
             self.contactCache[contact.id] = contact
 
-        cursor.execute("SELECT id, contact_id, type, confirmed, start, end, comment FROM holiday")
+        cursor.execute("SELECT id, contact_id, type, confirmed, start, start_half_day, end, end_half_day, comment FROM holiday")
         for record in cursor:
             holiday = Holiday(self.app)
             holiday.id = record[0]
@@ -843,8 +843,10 @@ class HolidayModel(QObject):
             holiday.type = record[2]
             holiday.confirmed = record[3]
             holiday.start = record[4]
-            holiday.end = record[5]
-            holiday.comment = record[6]
+            holiday.startHalfDay = bool(record[5])
+            holiday.end = record[6]
+            holiday.endHalfDay = bool(record[7])
+            holiday.comment = record[8]
             self.holidayCache[holiday.id] = holiday
 
         self.modelReset.emit()
@@ -866,7 +868,9 @@ class HolidayModel(QObject):
             "type": holiday.type,
             "confirmed": holiday.confirmed,
             "start": holiday.start,
+            "start_half_day": holiday.startHalfDay,
             "end": holiday.end,
+            "end_half_day": holiday.endHalfDay,
             "comment": holiday.comment
         }
 
@@ -874,11 +878,11 @@ class HolidayModel(QObject):
 
         if holiday.id:
             record["id"] = holiday.id
-            cursor.execute("UPDATE holiday SET contact_id = %(contact_id)s, type = %(type)s, confirmed = %(confirmed)s, start = %(start)s, end = %(end)s, comment = %(comment)s WHERE id = %(id)s", record)
+            cursor.execute("UPDATE holiday SET contact_id = %(contact_id)s, type = %(type)s, confirmed = %(confirmed)s, start = %(start)s, start_half_day = %(start_half_day)s, end = %(end)s, end_half_day = %(end_half_day)s, comment = %(comment)s WHERE id = %(id)s", record)
 
             self.app.messageQueue.publish("holiday", "update", holiday.id)
         else:
-            cursor.execute("INSERT INTO holiday (contact_id, type, confirmed, start, end, comment) VALUES (%(contact_id)s, %(type)s, %(confirmed)s, %(start)s, %(end)s, %(comment)s)", record)
+            cursor.execute("INSERT INTO holiday (contact_id, type, confirmed, start, start_half_day, end, end_half_day, comment) VALUES (%(contact_id)s, %(type)s, %(confirmed)s, %(start)s, %(start_half_day)s, %(end)s, %(end_half_day)s, %(comment)s)", record)
             holiday.id = cursor.lastrowid
 
             self.app.messageQueue.publish("holiday", "insert", holiday.id)
