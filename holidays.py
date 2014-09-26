@@ -932,8 +932,13 @@ class MainWindow(QMainWindow):
         self.createHolidayAction.triggered.connect(self.onCreateHolidayAction)
 
     def onHolidayModelReset(self):
-        # Build a set of holidays taken this year.
+        # Get the current user.
         contact = self.app.holidayModel.contactFromHandle()
+        if not contact:
+            self.setWindowTitle("Urlaubsplaner")
+            return
+
+        # Build a set of holidays taken this year.
         year = datetime.date.today().year
         days = set()
         firstHalfDays = set()
