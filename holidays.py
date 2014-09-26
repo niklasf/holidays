@@ -23,7 +23,7 @@ from PySide.QtGui import *
 EPOCH_ORDINAL = 719163
 
 MONTH_NAMES = ["Dezember", "Januar", "Februar", u"März", "April", "Mai", "Juni",
-               "Juli", "August", "September", "November", "Oktober", "Dezember"]
+               "Juli", "August", "September", "Oktober", "November", "Dezember"]
 
 
 def map_pixel(pixmap, mapper):
@@ -105,7 +105,7 @@ def is_holiday(date):
         holiday |= HOLIDAY_EASTER_MONDAY
     elif date.addDays(-39) == easter:
         holiday |= HOLIDAY_ASCENSION
-    elif date.addDays(-49) == easter:
+    elif date.addDays(-50) == easter:
         holiday |= HOLIDAY_PENTECOST
 
     if date.dayOfYear() == 1:
