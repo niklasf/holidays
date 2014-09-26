@@ -10,7 +10,6 @@ import indexed
 import ConfigParser
 import mysql.connector
 import sys
-import math
 import datetime
 import calendar
 import os
@@ -267,8 +266,6 @@ class CalendarHeader(CalendarStrip):
         opt.textAlignment = Qt.AlignCenter
 
         for xStart, date in self.visibleDays():
-            xEnd = xStart + self.columnWidth()
-
             # Draw weak headers.
             if date.weekday() == 0:
                 week = date.timetuple().tm_yday / 7 + 1
@@ -329,7 +326,6 @@ class CalendarHeader(CalendarStrip):
                     painter.drawPixmap(pixmapRect, self.lighterTodayPixmap, QRect(0, 0, 16, 16))
             else:
                 painter.drawPixmap(pixmapRect, self.todayPixmap, QRect(0, 0, 16, 16))
-
 
         # Draw go right buttons.
         for date, rect in self.visibleRightButtons():
@@ -418,7 +414,6 @@ class CalendarBody(CalendarStrip):
         self.mousePressPos = None
 
         self.app.holidayModel.modelReset.connect(self.update)
-
 
     def paintEvent(self, event):
         painter = QPainter(self)
@@ -534,7 +529,6 @@ class CalendarBody(CalendarStrip):
                 for holiday, rect in self.visibleHolidays():
                     if rect.contains(event.pos()):
                         self.holidayClicked.emit(holiday.id)
-                        holidayFound = True
             else:
                 self.dayRangeSelected.emit(dragStartDate.toordinal() - EPOCH_ORDINAL, dragEndDate.toordinal() - EPOCH_ORDINAL)
 
@@ -903,7 +897,7 @@ class MainWindow(QMainWindow):
         self.aboutAction.setShortcut("F1")
         self.aboutAction.triggered.connect(self.onAboutAction)
 
-        self.aboutQtAction =  QAction(u"Über Qt ...", self)
+        self.aboutQtAction = QAction(u"Über Qt ...", self)
         self.aboutQtAction.triggered.connect(self.onAboutQtAction)
 
         self.createHolidayAction = QAction("Eintragen", self)
@@ -972,15 +966,15 @@ class HolidayDialog(QDialog):
         self.startBox = QDateEdit()
         self.startBox.dateChanged.connect(self.onStartDateChanged)
         layout.addWidget(self.startBox, 1, 1)
-        
+
         layout.addWidget(QLabel("Ende:"), 2, 0, Qt.AlignLeft)
         self.endBox = QDateEdit()
         layout.addWidget(self.endBox, 2, 1)
-        
+
         layout.addWidget(QLabel("Kommentar:"), 3, 0, Qt.AlignTop)
         self.commentBox = QTextEdit()
         layout.addWidget(self.commentBox, 3, 1)
-        
+
         layout.addWidget(QLabel("Typ:"), 4, 0)
         self.typeBox = TypeComboBox(self.app)
         self.typeBox.currentIndexChanged.connect(self.onTypeChanged)
