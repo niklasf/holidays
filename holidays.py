@@ -1069,13 +1069,21 @@ class HolidayDialog(QDialog):
         layout.addWidget(self.contactBox, 0, 1)
 
         layout.addWidget(QLabel("Beginn:"), 1, 0, Qt.AlignLeft)
+        hbox = QHBoxLayout()
         self.startBox = QDateEdit()
         self.startBox.dateChanged.connect(self.onStartDateChanged)
-        layout.addWidget(self.startBox, 1, 1)
+        hbox.addWidget(self.startBox)
+        self.startHalfDayBox = QCheckBox("halber Tag")
+        hbox.addWidget(self.startHalfDayBox)
+        layout.addLayout(hbox, 1, 1)
 
         layout.addWidget(QLabel("Ende:"), 2, 0, Qt.AlignLeft)
+        hbox = QHBoxLayout()
         self.endBox = QDateEdit()
-        layout.addWidget(self.endBox, 2, 1)
+        hbox.addWidget(self.endBox)
+        self.endHalfDayBox = QCheckBox("halber Tag")
+        hbox.addWidget(self.endHalfDayBox)
+        layout.addLayout(hbox, 2, 1)
 
         layout.addWidget(QLabel("Kommentar:"), 3, 0, Qt.AlignTop)
         self.commentBox = QTextEdit()
@@ -1130,7 +1138,9 @@ class HolidayDialog(QDialog):
                  self.holiday.end.strftime("%d.%m.")))
 
         self.startBox.setDate(qdate(self.holiday.start))
+        self.startHalfDayBox.setChecked(self.holiday.startHalfDay)
         self.endBox.setDate(qdate(self.holiday.end))
+        self.endHalfDayBox.setChecked(self.holiday.endHalfDay)
 
         self.commentBox.setText(self.holiday.comment)
 
@@ -1139,7 +1149,9 @@ class HolidayDialog(QDialog):
 
     def onAccept(self):
         self.holiday.start = pydate(self.startBox.date())
+        self.holiday.startHalfDay = self.startHalfDayBox.isChecked()
         self.holiday.end = pydate(self.endBox.date())
+        self.holiday.endHalfDay = self.endHalfDayBox.isChecked()
         self.holiday.comment = self.commentBox.toPlainText()
         self.holiday.type = self.typeBox.type()
         self.holiday.confirmed = self.confirmedBox.isChecked()
