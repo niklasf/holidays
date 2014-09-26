@@ -912,6 +912,9 @@ class MainWindow(QMainWindow):
         self.initActions()
         self.initMenu()
 
+        self.app.holidayModel.modelReset.connect(self.onHolidayModelReset)
+        self.onHolidayModelReset()
+
     def initActions(self):
         self.reloadAction = QAction("Aktualisieren", self)
         self.reloadAction.setShortcut("F5")
@@ -927,6 +930,69 @@ class MainWindow(QMainWindow):
         self.createHolidayAction = QAction("Eintragen", self)
         self.createHolidayAction.setShortcut("Ctrl+N")
         self.createHolidayAction.triggered.connect(self.onCreateHolidayAction)
+
+    def onHolidayModelReset(self):
+        # Build a set of holidays taken this year.
+        contact = self.app.holidayModel.contactFromHandle()
+        year = datetime.date.today().year
+        days = set()
+        firstHalfDays = set()
+        secondHalfDays = set()
+
+        for holiday in self.app.holidayModel.holidayCache.values():
+            # Calculate for the current user only.
+            if holiday.contactId != contact.id:
+                continue
+
+            # Sum up only real holidays.
+            if holiday.type != TYPE_HOLIDAY:
+                continue
+
+            # Sum up only days in the current years.
+            if holiday.end < datetime.date(year, 1, 1) or holiday.start > datetime.date(year, 12, 31):
+                continue
+
+            day = holiday.start
+            while day <= holiday.end:
+                # National holidays do not count.
+                if is_holiday(day):
+                    day = day + datetime.timedelta(days=1)
+                    continue
+
+                # Heiligabend and Silvester count only half a day.
+                if day in (datetime.date(year, 12, 24), datetime.date(year, 12, 31)):
+                    if day == holiday.start and "half day start":
+                        pass
+                    elif day == holiday.end and "half day end":
+                        pass
+                    else:
+                        secondHalfDays.add(day)
+                    day = day + datetime.timedelta(days=1)
+                    continue
+
+                # Count.
+                if day == holiday.start and "half day start":
+                    secondHalfDays.add(day)
+                elif day == holiday.end and "half day end":
+                    firstHalfDays.add(day)
+                else:
+                    days.add(day)
+
+                day = day + datetime.timedelta(days=1)
+
+        # Set the window title with the sum.
+        numHalfDays = len(firstHalfDays.difference(days)) + len(secondHalfDays.difference(days))
+        numDays = len(days) + numHalfDays // 2
+        if numDays == 0 and numHalfDays == 0:
+            self.setWindowTitle(u"Urlaubsplaner")
+        elif numDays == 0 and numHalfDays == 1:
+            self.setWindowTitle(u"½ Tag Urlaub in %d" % year)
+        elif numDays == 1 and numHalfDays == 0:
+            self.setWindowTitle(u"1 Tag Urlaub in %d" % year)
+        elif numHalfDays % 2 == 1:
+            self.setWindowTitle(u"%d½ Tage Urlaub in %d" % (numDays, year))
+        else:
+            self.setWindowTitle(u"%d Tage Urlaub in %d" % (numDays, year))
 
     def onAboutAction(self):
         QMessageBox.about(self, self.windowTitle(),
