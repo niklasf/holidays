@@ -811,6 +811,20 @@ class Contact(object):
         self.email = None
         self.handle = None
 
+    def writableDepartments(self):
+        departments = set()
+
+        cursor = self.app.db.cursor()
+        cursor.execute("SELECT department_id FROM department WHERE director = %(contact_id)s", {
+            "contact_id": self.id,
+        })
+        for record in cursor:
+            departments.add(int(record[0]))
+        cursor.close()
+        self.app.db.commit()
+
+        return self.app.holidayModel.childDepartments(departments)
+
 
 TYPE_HOLIDAY = 0
 TYPE_BUSINESS_TRIP = 1
