@@ -850,6 +850,24 @@ class HolidayModel(QObject):
 
         self.app.messageQueue.received.connect(self.onMessageReceived)
 
+    def childDepartments(self, departments):
+        exhausted_departments = set()
+        departments = set(departments)
+
+        cursor = self.app.db.cursor()
+
+        while departments:
+            exhausted_departments.update(departments)
+            cursor.execute("SELECT department_id FROM department WHERE location IN (" + ", ".join(str(id) for id in departments) + ")")
+            for record in cursor:
+                departments.add(int(record[0]))
+            departments.difference_update(exhausted_departments)
+
+        cursor.close()
+        self.app.db.commit()
+
+        return exhausted_departments
+
     def reload(self):
         self.contactCache.clear()
         self.holidayCache.clear()
