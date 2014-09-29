@@ -595,7 +595,7 @@ class CalendarBody(CalendarStrip):
         for holiday in self.app.holidayModel.holidayCache.values():
             try:
                 y = self.app.holidayModel.contactCache.keys().index(holiday.contactId) * (15 + 25 + 15) + 15
-            except KeyError:
+            except ValueError:
                 continue
 
             startX = (holiday.start.toordinal() - EPOCH_ORDINAL - self.offset()) * self.columnWidth()
@@ -811,7 +811,7 @@ class Application(QApplication):
 
     def initModel(self):
         self.holidayModel = HolidayModel(self)
-        self.holidayModel.reload()
+        self.holidayModel.reloadHolidays()
 
 
 class Contact(object):
@@ -894,10 +894,6 @@ class HolidayModel(QObject):
         self.app.db.commit()
 
         return exhausted_departments
-
-    def reload(self):
-        self.reloadContacts(18)
-        self.reloadHolidays()
 
     def reloadContacts(self, department):
         departments = self.childDepartments([department])
@@ -1002,7 +998,7 @@ class HolidayModel(QObject):
 
     def onMessageReceived(self, id, session, channel, message, extra):
         if channel == "holiday":
-            self.reload()
+            self.reloadHolidays()
 
 
 class MainWindow(QMainWindow):
@@ -1139,7 +1135,7 @@ class MainWindow(QMainWindow):
         dialog.show()
 
     def onReloadAction(self):
-        self.app.holidayModel.reload()
+        self.app.holidayModel.reloadHolidays()
 
     def initMenu(self):
         mainMenu = self.menuBar().addMenu("Programm")
