@@ -811,6 +811,7 @@ class Application(QApplication):
 
     def initModel(self):
         self.holidayModel = HolidayModel(self)
+        self.holidayModel.reloadContacts()
         self.holidayModel.reloadHolidays()
 
 
@@ -872,6 +873,7 @@ class HolidayModel(QObject):
         super(HolidayModel, self).__init__()
         self.app = app
 
+        self.departmentId = None
         self.contactCache = indexed.IndexedOrderedDict()
         self.holidayCache = indexed.IndexedOrderedDict()
 
@@ -895,21 +897,43 @@ class HolidayModel(QObject):
 
         return exhausted_departments
 
-    def reloadContacts(self, department):
-        departments = self.childDepartments([department])
+    def contactFromRecord(self, record):
+        contact = Contact(self.app)
+        contact.id = record[0]
+        contact.department = record[1]
+        contact.name = u"%s, %s" % (record[3], record[2])
+        contact.email = record[4]
+        contact.handle = record[5]
+        return contact
 
+    def reloadContacts(self, departmentId=None):
         self.contactCache.clear()
+
+        cursor = self.app.db.cursor()
+        cursor.execute("SELECT contact_id, department, firstname, name, email, login_id FROM contact WHERE login_id = %(login_id)s", {
+            "login_id": getpass.getuser()
+        })
+        for record in cursor:
+            self.contactCache[record[0]] = self.contactFromRecord(record)
+        cursor.close()
+        self.app.db.commit()
+
+        if departmentId is not None:
+            self.departmentId = departmentId
+
+        if not self.departmentId:
+            self.modelReset.emit()
+            return
+
+        departments = self.childDepartments([self.departmentId])
+        if not departments:
+            self.modelReset.emit()
+            return
 
         cursor = self.app.db.cursor()
         cursor.execute("SELECT contact_id, department, firstname, name, email, login_id FROM contact WHERE department IN (" + ", ".join(str(id) for id in departments) + ") ORDER BY name ASC")
         for record in cursor:
-            contact = Contact(self.app)
-            contact.id = record[0]
-            contact.department = record[1]
-            contact.name = u"%s, %s" % (record[3], record[2])
-            contact.email = record[4]
-            contact.handle = record[5]
-            self.contactCache[contact.id] = contact
+            self.contactCache[record[0]] = self.contactFromRecord(record)
 
         cursor.close()
         self.app.db.commit()
@@ -1032,14 +1056,35 @@ class MainWindow(QMainWindow):
         self.createHolidayAction.setShortcut("Ctrl+N")
         self.createHolidayAction.triggered.connect(self.onCreateHolidayAction)
 
+        # Load trail of departments.
         self.viewActionGroup = QActionGroup(self)
         self.viewActionGroup.setExclusive(True)
-        self.viewDepartmentAction = self.viewActionGroup.addAction("Engineering")
-        self.viewDepartmentAction.triggered.connect(lambda: self.app.holidayModel.reloadContacts(4))
-        self.viewDepartmentAction.setCheckable(True)
-        self.viewSubDepartmentAction = self.viewActionGroup.addAction("Operational Engineering")
-        self.viewSubDepartmentAction.triggered.connect(lambda: self.app.holidayModel.reloadContacts(18))
-        self.viewSubDepartmentAction.setCheckable(True)
+
+        contact = self.app.holidayModel.contactFromHandle()
+        department = contact.department if contact else None
+
+        cursor = self.app.db.cursor()
+        while department:
+            cursor.execute("SELECT name, location FROM department WHERE department_id = %(department_id)s", {
+                "department_id": department,
+            })
+
+            record = cursor.fetchone()
+            print record
+            if not record:
+                break
+
+            action = self.viewActionGroup.addAction(record[0])
+            action.triggered.connect(lambda id=department: self.app.holidayModel.reloadContacts(id))
+            action.setCheckable(True)
+
+            department = record[1]
+
+        cursor.close()
+        self.app.db.commit()
+
+        if self.viewActionGroup.actions():
+            self.viewActionGroup.actions()[0].trigger()
 
     def onHolidayModelReset(self):
         # Get the current user.
