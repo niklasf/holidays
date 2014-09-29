@@ -359,7 +359,7 @@ class HolidayOverlay(object):
 class PastOverlay(object):
     def __init__(self, app):
         self.app = app
-        self._brush = QBrush(Qt.Dense7Pattern)
+        self._brush = QBrush(QColor(240, 240, 240, 200))
 
     def brush(self):
         return self._brush
@@ -431,7 +431,7 @@ class CalendarBody(CalendarStrip):
         self.app = app
         self.setMouseTracking(True)
 
-        self.overlays = [HolidayOverlay(self.app), SchoolHolidays(self.app), PastOverlay(self.app)]
+        self.overlays = [HolidayOverlay(self.app), SchoolHolidays(self.app)]
 
         self.setContextMenuPolicy(Qt.CustomContextMenu)
         self.customContextMenuRequested.connect(self.onCustomContextMenuRequested)
@@ -515,6 +515,13 @@ class CalendarBody(CalendarStrip):
             else:
                 painter.setBrush(QBrush(color))
             painter.drawRect(rect)
+
+        # Gray out past.
+        overlay = PastOverlay(self.app)
+        for x, date in self.visibleDays():
+            rect = QRect(x, 0, self.columnWidth(), self.height())
+            if overlay.matches(date):
+                painter.fillRect(rect, overlay.brush())
 
         # Draw names.
         for x, date in self.visibleDays():
