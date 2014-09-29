@@ -1192,7 +1192,7 @@ class MainWindow(QMainWindow):
         holidaysMenu.addAction(self.createHolidayAction)
 
         viewMenu = self.menuBar().addMenu("Ansicht")
-        for action in self.viewActionGroup.actions():
+        for action in reversed(self.viewActionGroup.actions()):
             viewMenu.addAction(action)
 
     def sizeHint(self):
