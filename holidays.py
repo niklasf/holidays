@@ -807,6 +807,7 @@ class Contact(object):
         self.app = app
 
         self.id = None
+        self.department = None
         self.name = None
         self.email = None
         self.handle = None
@@ -855,13 +856,14 @@ class HolidayModel(QObject):
         self.holidayCache.clear()
 
         cursor = self.app.db.cursor()
-        cursor.execute("SELECT contact_id, firstname, name, email, login_id FROM contact WHERE department = 18 OR login_id = '10179939' ORDER BY name ASC")
+        cursor.execute("SELECT contact_id, department, firstname, name, email, login_id FROM contact WHERE department IN (4, 18, 56, 57) OR login_id = '10179939' ORDER BY name ASC")
         for record in cursor:
             contact = Contact(self.app)
             contact.id = record[0]
-            contact.name = "%s, %s" % (record[2], record[1])
-            contact.email = record[3]
-            contact.handle = record[4]
+            contact.department = record[1]
+            contact.name = u"%s, %s" % (record[3], record[2])
+            contact.email = record[4]
+            contact.handle = record[5]
             self.contactCache[contact.id] = contact
 
         cursor.execute("SELECT id, contact_id, type, confirmed, start, start_half_day, end, end_half_day, comment FROM holiday")
