@@ -722,7 +722,7 @@ class CalendarPane(QScrollArea):
 
         # Check write permissions.
         if ownContact.id != contact.id and contact.department not in ownContact.writableDepartments():
-            QMessageBox.warning(self, "Urlaubsplaner", u"Sie (%s) haben keine Schreibrechte für die Abteilung." % ownContact.name)
+            QMessageBox.warning(self, "Urlaubsplaner", u"Sie (%s) haben keine Schreibrechte für die Abteilung von %s." % (ownContact.name, contact.name))
             return
 
         holiday = Holiday(self.app)
