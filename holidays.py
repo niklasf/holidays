@@ -682,6 +682,7 @@ class CalendarPane(QScrollArea):
         self.animationEnabled = True
 
     def onDayRangeSelected(self, startOffset, endOffset):
+        # Need a contact entry to create holiday entries.
         if not self.app.holidayModel.contactFromHandle():
             QMessageBox.warning(self, "Urlaubsplaner", u"Sie (%s) können keinen Urlaub eintragen, da Sie nicht in der Kontakttabelle verzeichnet sind." % getpass.getuser())
             return
@@ -703,7 +704,19 @@ class CalendarPane(QScrollArea):
         self.onDayRangeSelected(offset, offset + 7)
 
     def onCellClicked(self, day, index):
+        # Need a contact entry to create holiday entries.
+        ownContact = self.app.holidayModel.contactFromHandle()
+        if not ownContact:
+            QMessageBox.warning(self, "Urlaubsplaner", u"Sie (%s) können keinen Urlaub eintragen, da Sie nicht in der Kontakttabelle verzeichnet sind." % getpass.getuser())
+            return
+
+        # Get the relevant contact.
         contact = self.app.holidayModel.contactCache.values()[index]
+
+        # Check permissions.
+        if ownContact.id != contact.id and contact.department not in ownContact.writableDepartments():
+            QMessageBox.warning(self, "Urlaubsplaner", u"Sie (%s) haben keine Schreibrechte für die Abteilung." % ownContact.name)
+            return
 
         holiday = Holiday(self.app)
         holiday.start = datetime.date.fromordinal(day + EPOCH_ORDINAL)
