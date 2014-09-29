@@ -1070,7 +1070,6 @@ class MainWindow(QMainWindow):
             })
 
             record = cursor.fetchone()
-            print record
             if not record:
                 break
 
