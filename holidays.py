@@ -693,6 +693,7 @@ class CalendarPane(QScrollArea):
 
     def resizeEvent(self, event):
         self.updateWidgetSizes()
+        return super(CalendarPane, self).resizeEvent(event)
 
     def updateWidgetSizes(self):
         self.header.resize(self.width(), self.header.sizeHint().height())
