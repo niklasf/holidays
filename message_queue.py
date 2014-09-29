@@ -23,6 +23,8 @@ class MessageQueue(QObject):
         cursor = self.db.cursor()
         cursor.execute("SELECT MAX(id) FROM message_queue")
         self.last_id, = cursor.fetchone()
+        cursor.close()
+        self.db.commit()
 
         self.thread = threading.Thread(target=self.run)
         self.thread.daemon = True
@@ -49,6 +51,8 @@ class MessageQueue(QObject):
                 try:
                     cursor = self.db.cursor()
                     cursor.execute("INSERT INTO message_queue (session, channel, message, extra) VALUES (%(session)s, %(channel)s, %(message)s, %(extra)s)", item)
+                    cursor.close()
+                    self.db.commit()
                 except mysql.connector.Error:
                     self.queue.put(item)
 
@@ -68,5 +72,8 @@ class MessageQueue(QObject):
                     for id, session, channel, message, extra in cursor:
                         self.received.emit(id, session, channel, message, extra)
                         self.last_id = id
+
+                    cursor.close()
+                    self.db.commit()
                 except mysql.connector.Error:
                     pass

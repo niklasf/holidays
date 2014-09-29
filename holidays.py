@@ -788,8 +788,7 @@ class Application(QApplication):
             user=self.config.get("MySQL", "User"),
             password=self.config.get("MySQL", "Password"),
             database=self.config.get("MySQL", "Database"),
-            host=self.config.get("MySQL", "Host"),
-            autocommit=True)
+            host=self.config.get("MySQL", "Host"))
 
     def initDb(self):
         self.db = self.mysqlConnect()
@@ -880,6 +879,9 @@ class HolidayModel(QObject):
             holiday.comment = record[8]
             self.holidayCache[holiday.id] = holiday
 
+        cursor.close()
+        self.app.db.commit()
+
         self.modelReset.emit()
 
     def rowCount(self):
@@ -918,6 +920,9 @@ class HolidayModel(QObject):
 
             self.app.messageQueue.publish("holiday", "insert", holiday.id)
 
+        cursor.close()
+        self.app.db.commit()
+
         self.holidayCache[holiday.id] = holiday
         self.modelReset.emit()
 
@@ -928,6 +933,9 @@ class HolidayModel(QObject):
         cursor.execute("DELETE FROM holiday WHERE id = %(id)s", {
             "id": holidayId,
         })
+        cursor.close()
+        self.app.db.commit()
+
         self.app.messageQueue.publish("holiday", "delete", holidayId)
 
         self.modelReset.emit()
