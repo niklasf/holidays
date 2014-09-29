@@ -589,7 +589,13 @@ class CalendarBody(CalendarStrip):
                 continue
 
             startX = (holiday.start.toordinal() - EPOCH_ORDINAL - self.offset()) * self.columnWidth()
+            if holiday.startHalfDay:
+                startX += self.columnWidth() / 2
+
             endX = (holiday.end.toordinal() + 1 - EPOCH_ORDINAL - self.offset()) * self.columnWidth()
+            if holiday.endHalfDay:
+                endX -= self.columnWidth() / 2
+
             yield holiday, QRect(startX, y, endX - startX, 25)
 
 
