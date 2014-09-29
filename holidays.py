@@ -713,7 +713,7 @@ class CalendarPane(QScrollArea):
         # Get the relevant contact.
         contact = self.app.holidayModel.contactCache.values()[index]
 
-        # Check permissions.
+        # Check write permissions.
         if ownContact.id != contact.id and contact.department not in ownContact.writableDepartments():
             QMessageBox.warning(self, "Urlaubsplaner", u"Sie (%s) haben keine Schreibrechte für die Abteilung." % ownContact.name)
             return
@@ -1137,6 +1137,15 @@ class HolidayDialog(QDialog):
         self.app = app
         self.holiday = holiday
 
+        # Check write permissions.
+        self.writable = False
+        ownContact = self.app.holidayModel.contactFromHandle()
+        if ownContact:
+            if holiday.contactId == ownContact.id:
+                self.writable = True
+            elif holiday.contact().department in ownContact.writableDepartments():
+                self.writable = True
+
         self.initUi()
         self.initValues()
         self.onEndHalfDayBoxStatusMightHaveToChange()
@@ -1156,10 +1165,12 @@ class HolidayDialog(QDialog):
         layout.addWidget(QLabel("Beginn:"), 1, 0, Qt.AlignLeft)
         hbox = QHBoxLayout()
         self.startBox = QDateEdit()
+        self.startBox.setEnabled(self.writable)
         self.startBox.dateChanged.connect(self.onStartDateChanged)
         self.startBox.dateChanged.connect(self.onEndHalfDayBoxStatusMightHaveToChange)
         hbox.addWidget(self.startBox)
         self.startHalfDayBox = QCheckBox("halber Tag")
+        self.startHalfDayBox.setEnabled(self.writable)
         self.startHalfDayBox.clicked.connect(self.onEndHalfDayBoxStatusMightHaveToChange)
         hbox.addWidget(self.startHalfDayBox)
         layout.addLayout(hbox, 1, 1)
@@ -1167,6 +1178,7 @@ class HolidayDialog(QDialog):
         layout.addWidget(QLabel("Ende:"), 2, 0, Qt.AlignLeft)
         hbox = QHBoxLayout()
         self.endBox = QDateEdit()
+        self.endBox.setEnabled(self.writable)
         self.endBox.dateChanged.connect(self.onEndHalfDayBoxStatusMightHaveToChange)
         hbox.addWidget(self.endBox)
         self.endHalfDayBox = QCheckBox("halber Tag")
@@ -1175,17 +1187,21 @@ class HolidayDialog(QDialog):
 
         layout.addWidget(QLabel("Kommentar:"), 3, 0, Qt.AlignTop)
         self.commentBox = QTextEdit()
+        self.commentBox.setEnabled(self.writable)
         layout.addWidget(self.commentBox, 3, 1)
 
         layout.addWidget(QLabel("Typ:"), 4, 0)
         self.typeBox = TypeComboBox(self.app)
         self.typeBox.currentIndexChanged.connect(self.onTypeChanged)
+        self.typeBox.setEnabled(self.writable)
         layout.addWidget(self.typeBox, 4, 1)
         self.confirmedBox = QCheckBox("Genehmigt")
+        self.confirmedBox.setEnabled(self.writable)
         layout.addWidget(self.confirmedBox, 5, 1)
 
         hbox = QHBoxLayout()
         self.deleteButton = QPushButton(self.app.deleteIcon, u"Löschen")
+        self.deleteButton.setEnabled(self.writable)
         self.deleteButton.clicked.connect(self.onDeleteClicked)
         self.deleteButton.setAutoDefault(False)
         hbox.addWidget(self.deleteButton, 0)
@@ -1207,14 +1223,14 @@ class HolidayDialog(QDialog):
             self.endHalfDayBox.setChecked(False)
             self.endHalfDayBox.setEnabled(False)
         else:
-            self.endHalfDayBox.setEnabled(True)
+            self.endHalfDayBox.setEnabled(self.writable)
 
     def onTypeChanged(self, index):
         if self.typeBox.type() == TYPE_HEALTH:
             self.confirmedBox.setChecked(True)
             self.confirmedBox.setEnabled(False)
         else:
-            self.confirmedBox.setEnabled(True)
+            self.confirmedBox.setEnabled(self.writable)
 
     def initValues(self):
         contact = self.holiday.contact()
@@ -1243,6 +1259,10 @@ class HolidayDialog(QDialog):
         self.confirmedBox.setChecked(self.holiday.confirmed)
 
     def onAccept(self):
+        if not self.writable:
+            self.accept()
+            return
+
         self.holiday.start = pydate(self.startBox.date())
         self.holiday.startHalfDay = self.startHalfDayBox.isChecked()
         self.holiday.end = pydate(self.endBox.date())
@@ -1254,6 +1274,10 @@ class HolidayDialog(QDialog):
         self.accept()
 
     def onDeleteClicked(self):
+        if not self.writable:
+            self.reject()
+            return
+
         if self.holiday.id:
             if QMessageBox.Yes == QMessageBox.question(self, self.windowTitle(),
                                                        u"Diesen Kalendereintrag wirklich löschen?",
