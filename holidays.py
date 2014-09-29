@@ -422,6 +422,8 @@ class CalendarBody(CalendarStrip):
 
     dayClicked = Signal(int)
 
+    cellClicked = Signal(int, int)
+
     dayRangeSelected = Signal(int, int)
 
     def __init__(self, app, parent=None):
@@ -564,15 +566,23 @@ class CalendarBody(CalendarStrip):
             if rect.contains(event.pos()):
                 return
 
-        self.onDayClicked(event.pos())
-
-    def onDayClicked(self, pos):
-        self.dayClicked.emit(int(self.offset() + pos.x() / self.columnWidth()))
+        self.dayClicked.emit(int(self.offset() + event.pos().x() / self.columnWidth()))
 
     def onCustomContextMenuRequested(self, pos):
         contextMenu = QMenu()
 
-        contextMenu.addAction(u"Eintragen", lambda: self.onDayClicked(pos))
+        # Get day by x-position.
+        day =  int(self.offset() + pos.x() / self.columnWidth())
+        contextMenu.addAction(u"Eintragen", lambda: self.dayClicked.emit(day))
+
+        # Get contact by y-position.
+        index = max(pos.y() // (15 + 25 + 15), 0)
+        try:
+            contact = self.app.holidayModel.contactCache.values()[index]
+            contextMenu.addAction(u"Eintragen für »%s«" % contact.name, lambda: self.cellClicked.emit(day, index))
+        except IndexError:
+            pass
+
         contextMenu.addSeparator()
 
         for holiday, rect in self.visibleHolidays():
@@ -626,6 +636,7 @@ class CalendarPane(QScrollArea):
         self.widget().setOffset(self.offset)
         self.widget().holidayClicked.connect(self.onHolidayClicked)
         self.widget().dayClicked.connect(self.onDayClicked)
+        self.widget().cellClicked.connect(self.onCellClicked)
         self.widget().dayRangeSelected.connect(self.onDayRangeSelected)
 
         self.animation = VariantAnimation(self)
@@ -690,6 +701,17 @@ class CalendarPane(QScrollArea):
 
     def onDayClicked(self, offset):
         self.onDayRangeSelected(offset, offset + 7)
+
+    def onCellClicked(self, day, index):
+        contact = self.app.holidayModel.contactCache.values()[index]
+
+        holiday = Holiday(self.app)
+        holiday.start = datetime.date.fromordinal(day + EPOCH_ORDINAL)
+        holiday.end = datetime.date.fromordinal(day + 7 + EPOCH_ORDINAL)
+        holiday.contactId = contact.id
+
+        dialog = HolidayDialog(self.app, holiday, self)
+        dialog.show()
 
     def resizeEvent(self, event):
         self.updateWidgetSizes()
