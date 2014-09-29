@@ -896,8 +896,11 @@ class HolidayModel(QObject):
         return exhausted_departments
 
     def reload(self):
+        self.reloadContacts()
+        self.reloadHolidays()
+
+    def reloadContacts(self):
         self.contactCache.clear()
-        self.holidayCache.clear()
 
         cursor = self.app.db.cursor()
         cursor.execute("SELECT contact_id, department, firstname, name, email, login_id FROM contact WHERE department IN (4, 18, 56, 57) OR login_id = '10179939' ORDER BY name ASC")
@@ -909,6 +912,16 @@ class HolidayModel(QObject):
             contact.email = record[4]
             contact.handle = record[5]
             self.contactCache[contact.id] = contact
+
+        cursor.close()
+        self.app.db.commit()
+
+        self.modelReset.emit()
+
+    def reloadHolidays(self):
+        self.holidayCache.clear()
+
+        cursor = self.app.db.cursor()
 
         cursor.execute("SELECT id, contact_id, type, confirmed, start, start_half_day, end, end_half_day, comment FROM holiday")
         for record in cursor:
