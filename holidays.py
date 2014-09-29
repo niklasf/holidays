@@ -896,14 +896,16 @@ class HolidayModel(QObject):
         return exhausted_departments
 
     def reload(self):
-        self.reloadContacts()
+        self.reloadContacts(18)
         self.reloadHolidays()
 
-    def reloadContacts(self):
+    def reloadContacts(self, department):
+        departments = self.childDepartments([department])
+
         self.contactCache.clear()
 
         cursor = self.app.db.cursor()
-        cursor.execute("SELECT contact_id, department, firstname, name, email, login_id FROM contact WHERE department IN (4, 18, 56, 57) OR login_id = '10179939' ORDER BY name ASC")
+        cursor.execute("SELECT contact_id, department, firstname, name, email, login_id FROM contact WHERE department IN (" + ", ".join(str(id) for id in departments) + ") ORDER BY name ASC")
         for record in cursor:
             contact = Contact(self.app)
             contact.id = record[0]
@@ -1034,6 +1036,15 @@ class MainWindow(QMainWindow):
         self.createHolidayAction.setShortcut("Ctrl+N")
         self.createHolidayAction.triggered.connect(self.onCreateHolidayAction)
 
+        self.viewActionGroup = QActionGroup(self)
+        self.viewActionGroup.setExclusive(True)
+        self.viewDepartmentAction = self.viewActionGroup.addAction("Engineering")
+        self.viewDepartmentAction.triggered.connect(lambda: self.app.holidayModel.reloadContacts(4))
+        self.viewDepartmentAction.setCheckable(True)
+        self.viewSubDepartmentAction = self.viewActionGroup.addAction("Operational Engineering")
+        self.viewSubDepartmentAction.triggered.connect(lambda: self.app.holidayModel.reloadContacts(18))
+        self.viewSubDepartmentAction.setCheckable(True)
+
     def onHolidayModelReset(self):
         # Get the current user.
         contact = self.app.holidayModel.contactFromHandle()
@@ -1139,6 +1150,10 @@ class MainWindow(QMainWindow):
 
         holidaysMenu = self.menuBar().addMenu("Urlaub")
         holidaysMenu.addAction(self.createHolidayAction)
+
+        viewMenu = self.menuBar().addMenu("Ansicht")
+        for action in self.viewActionGroup.actions():
+            viewMenu.addAction(action)
 
     def sizeHint(self):
         return QSize(900, 600)
