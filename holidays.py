@@ -1220,6 +1220,11 @@ class MainWindow(QMainWindow):
         self.app.holidayModel.modelReset.connect(self.onHolidayModelReset)
         self.onHolidayModelReset()
 
+        contact = self.app.holidayModel.contactFromHandle()
+        if contact and not contact.id in self.app.holidayModel.holidayAnnualCache:
+            dialog = AnnualHolidaysDialog(self.app, contact, self)
+            dialog.show()
+
     def initActions(self):
         self.reloadAction = QAction("Aktualisieren", self)
         self.reloadAction.setShortcut("F5")
