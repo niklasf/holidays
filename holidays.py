@@ -1048,6 +1048,7 @@ class MainWindow(QMainWindow):
 
         centralWidget = QWidget()
         vbox = QVBoxLayout(centralWidget)
+        vbox.setContentsMargins(0, 0, 0, 0)
         vbox.addWidget(CalendarPane(self.app))
         vbox.addWidget(KeyWidget(self.app))
 
