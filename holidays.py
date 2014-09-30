@@ -499,10 +499,14 @@ class CalendarBody(CalendarStrip):
                 color = self.app.yellow
 
             if self.mousePos and rect.contains(self.mousePos):
+                gradient = QRadialGradient(QPointF(0.5, 0.5), 0.5)
+                gradient.setCoordinateMode(QGradient.ObjectBoundingMode)
+                gradient.setColorAt(0, color.lighter(140))
                 if self.mousePressPos:
-                    painter.setBrush(QBrush(color.lighter(90)))
+                    gradient.setColorAt(1, color.lighter(80))
                 else:
-                    painter.setBrush(QBrush(color.lighter(110)))
+                    gradient.setColorAt(1, color)
+                painter.setBrush(QBrush(gradient))
             else:
                 painter.setBrush(QBrush(color))
             painter.drawRect(rect)
