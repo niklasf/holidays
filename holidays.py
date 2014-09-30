@@ -1114,13 +1114,13 @@ class KeyWidget(QWidget):
 
     def drawRect(self, painter, x, brush):
         painter.setBrush(brush)
-        painter.drawRect(x, (self.height() - 15) / 2 - 5, 20, 15)
+        painter.drawRect(x, (self.height() - 15) / 2, 20, 15)
         return x + 20 + 8
 
     def drawLabel(self, painter, x, text):
         metrics = QFontMetrics(painter.font())
         width = metrics.width(text)
-        rect = QRect(x, (self.height() - metrics.height()) / 2 - 5, width, metrics.height())
+        rect = QRect(x, (self.height() - metrics.height()) / 2, width, metrics.height())
         painter.drawText(rect, Qt.AlignLeft | Qt.AlignVCenter, text)
         return x + width + 12
 
@@ -1136,10 +1136,10 @@ class KeyWidget(QWidget):
         # Urlaub (offen / genehmigt).
         x = self.drawKey(painter, 5, QBrush(self.app.green), "Urlaub")
         path = QPainterPath()
-        path.moveTo(5, (self.height() - 15) / 2 - 5)
-        path.lineTo(5 + 20, (self.height() - 15) / 2 - 5)
-        path.lineTo(5, (self.height() - 15) / 2 - 5 + 15)
-        path.lineTo(5, (self.height() - 15) / 2 - 5)
+        path.moveTo(5, (self.height() - 15) / 2)
+        path.lineTo(5 + 20, (self.height() - 15) / 2)
+        path.lineTo(5, (self.height() - 15) / 2 + 15)
+        path.lineTo(5, (self.height() - 15) / 2)
         painter.fillPath(path, QBrush(self.app.blue))
 
         # Weiter Urlaubstypen.
@@ -1162,7 +1162,7 @@ class KeyWidget(QWidget):
         painter.end()
 
     def sizeHint(self):
-        return QSize(960, max(QFontMetrics(self.font()).height(), 15) + 10)
+        return QSize(960, max(QFontMetrics(self.font()).height(), 15) + 5)
 
 
 class MainWindow(QMainWindow):
@@ -1171,6 +1171,7 @@ class MainWindow(QMainWindow):
         self.app = app
 
         centralWidget = QWidget()
+        centralWidget.setContentsMargins(0, 0, 0, 0)
         vbox = QVBoxLayout(centralWidget)
         vbox.setContentsMargins(0, 0, 0, 0)
         vbox.addWidget(CalendarPane(self.app))
