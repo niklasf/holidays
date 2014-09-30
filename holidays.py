@@ -1162,7 +1162,7 @@ class KeyWidget(QWidget):
         painter.end()
 
     def sizeHint(self):
-        return QSize(200, 25)
+        return QSize(960, max(QFontMetrics(self.font()).height(), 15) + 10)
 
 
 class MainWindow(QMainWindow):
