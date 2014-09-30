@@ -831,7 +831,12 @@ class Contact(object):
         self.email = None
         self.handle = None
 
+        self._writableDepartments = None
+
     def writableDepartments(self):
+        if self._writableDepartments is not None:
+            return self._writableDepartments
+
         departments = set()
 
         cursor = self.app.db.cursor()
@@ -843,7 +848,8 @@ class Contact(object):
         cursor.close()
         self.app.db.commit()
 
-        return self.app.holidayModel.childDepartments(departments)
+        self._writableDepartments = self.app.holidayModel.childDepartments(departments)
+        return self._writableDepartments
 
 
 TYPE_HOLIDAY = 0
