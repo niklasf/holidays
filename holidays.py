@@ -1224,6 +1224,7 @@ class MainWindow(QMainWindow):
         self.app.holidayModel.modelReset.connect(self.onHolidayModelReset)
         self.onHolidayModelReset()
 
+    def onShow(self):
         contact = self.app.holidayModel.contactFromHandle()
         if contact and not contact.id in self.app.holidayModel.holidayAnnualCache:
             dialog = AnnualHolidaysDialog(self.app, contact, self)
@@ -1639,5 +1640,6 @@ if __name__ == "__main__":
 
     window = MainWindow(app)
     window.show()
+    window.onShow()
 
     app.exec_()
