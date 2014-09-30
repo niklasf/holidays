@@ -476,8 +476,10 @@ class CalendarBody(CalendarStrip):
             painter.drawLine(x, 0, x, self.height())
 
             # Highlight hovered day.
-            if date == hoveredDate or (dragStartDate and hoveredDate and date >= min(hoveredDate, dragStartDate) and date <= max(hoveredDate, dragStartDate)):
-                painter.fillRect(rect, QBrush(QColor(220, 220, 220, 100)))
+            if date == hoveredDate:
+                painter.fillRect(rect, QBrush(QColor(180, 200, 220, 220)))
+            elif (dragStartDate and hoveredDate and date >= min(hoveredDate, dragStartDate) and date <= max(hoveredDate, dragStartDate)):
+                painter.fillRect(rect, QBrush(QColor(180, 200, 220, 100)))
 
         # Paint rows.
         painter.setPen(QPen(self.app.gray))
