@@ -524,10 +524,19 @@ class CalendarBody(CalendarStrip):
             painter.drawRect(rect)
 
         # Draw names.
+        ownContact = self.app.holidayModel.contactFromHandle()
         for x, date in self.visibleDays():
             if date.day == 1:
                 for i, contact in enumerate(self.app.holidayModel.contactCache.values()):
-                    painter.drawText(QRect(x + 10, (15 + 25 + 15) * i + 15, self.columnWidth() * 20 - 10, 25), Qt.AlignVCenter, contact.name)
+                    if ownContact and (ownContact.id == contact.id or contact.department in ownContact.writableDepartments()):
+                        numHolidays, plusOneHalf = contact.numHolidays(date.year)
+                        if plusOneHalf:
+                            text = u"%s (%d½ in %d)" % (contact.name, numHolidays, date.year)
+                        else:
+                            text = u"%s (%d in %d)" % (contact.name, numHolidays, date.year)
+                    else:
+                        text = contact.name
+                    painter.drawText(QRect(x + 10, (15 + 25 + 15) * i + 15, self.columnWidth() * 20 - 10, 25), Qt.AlignVCenter, text)
 
         painter.end()
 
