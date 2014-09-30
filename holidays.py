@@ -359,7 +359,7 @@ class HolidayOverlay(object):
 class PastOverlay(object):
     def __init__(self, app):
         self.app = app
-        self._brush = QBrush(QColor(240, 240, 240, 200))
+        self._brush = QBrush(QColor(212, 208, 200, 200))
 
     def brush(self):
         return self._brush
