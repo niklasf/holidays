@@ -1056,9 +1056,18 @@ class KeyWidget(QWidget):
 
     def paintEvent(self, event):
         painter = QPainter(self)
+        painter.setRenderHint(QPainter.Antialiasing)
 
-        # Urlaub.
+        # Urlaub (offen / genehmigt).
         x = self.drawKey(painter, 5, QBrush(self.app.green), "Urlaub")
+        path = QPainterPath()
+        path.moveTo(5, (self.height() - 15) / 2 - 5)
+        path.lineTo(5 + 20, (self.height() - 15) / 2 - 5)
+        path.lineTo(5, (self.height() - 15) / 2 - 5 + 15)
+        path.lineTo(5, (self.height() - 15) / 2 - 5)
+        painter.fillPath(path, QBrush(self.app.blue))
+
+        # Weiter Urlaubstypen.
         x = self.drawKey(painter, x, QBrush(self.app.purple), "Dienstreise")
         x = self.drawKey(painter, x, QBrush(self.app.orange), "Krankheit")
         x = self.drawKey(painter, x, QBrush(self.app.gray), "Planung")
