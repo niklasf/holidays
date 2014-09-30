@@ -438,14 +438,6 @@ class CalendarBody(CalendarStrip):
         # Fill background.
         painter.fillRect(self.rect(), QBrush(self.app.white))
 
-        # Paint rows.
-        painter.setPen(QPen(self.app.gray))
-        for i in xrange(self.app.holidayModel.rowCount()):
-            painter.drawLine(0, (15 + 25 + 15) * i + 15,
-                self.width(), (15 + 25 + 15) * i + 15)
-            painter.drawLine(0, (15 + 25 + 15) * i + 15 + 25,
-                self.width(), (15 + 25 + 15) * i + 15 + 25)
-
         # Calculate drag start day.
         if self.mousePressPos:
             dragStartDate = self.dateFromX(self.mousePressPos.x())
@@ -471,6 +463,11 @@ class CalendarBody(CalendarStrip):
         for x, date in self.visibleDays():
             rect = QRect(x, 0, self.columnWidth(), self.height())
 
+            # Draw overlays.
+            for overlay in self.overlays:
+                if overlay.matches(date):
+                    painter.fillRect(rect, overlay.brush())
+
             # Paint columns.
             if date.day == 1:
                 painter.setPen(QPen())
@@ -482,10 +479,13 @@ class CalendarBody(CalendarStrip):
             if date == hoveredDate or (dragStartDate and hoveredDate and date >= min(hoveredDate, dragStartDate) and date <= max(hoveredDate, dragStartDate)):
                 painter.fillRect(rect, QBrush(QColor(220, 220, 220, 100)))
 
-            # Draw overlays.
-            for overlay in self.overlays:
-                if overlay.matches(date):
-                    painter.fillRect(rect, overlay.brush())
+        # Paint rows.
+        painter.setPen(QPen(self.app.gray))
+        for i in xrange(self.app.holidayModel.rowCount()):
+            painter.drawLine(0, (15 + 25 + 15) * i + 15,
+                self.width(), (15 + 25 + 15) * i + 15)
+            painter.drawLine(0, (15 + 25 + 15) * i + 15 + 25,
+                self.width(), (15 + 25 + 15) * i + 15 + 25)
 
         painter.setPen(QPen())
 
@@ -782,7 +782,7 @@ class CalendarPane(QScrollArea):
 class Application(QApplication):
     def initColors(self):
         self.white = QColor(255, 255, 255)
-        self.lightRed = QColor(242, 219, 219, 100)
+        self.lightRed = QColor(242, 219, 219, 150)
         self.orange = QColor(227, 108, 10)
         self.green = QColor(118, 146, 60)
         self.lightGreen = QColor(167, 185, 129)
