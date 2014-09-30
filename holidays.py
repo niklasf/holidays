@@ -544,7 +544,11 @@ class CalendarBody(CalendarStrip):
             if date.day == 1:
                 for i, contact in enumerate(self.app.holidayModel.contactCache.values()):
                     if ownContact and (ownContact.id == contact.id or contact.department in ownContact.writableDepartments()):
-                        text = u"%s (%s in %d)" % (contact.name, format_halves(contact.numHolidays(date.year)), date.year)
+                        if date.year == self.app.holidayModel.holidayAnnualYear and contact.id in self.app.holidayModel.holidayAnnualCache:
+                            available = self.app.holidayModel.holidayAnnualCache[contact.id]
+                            text = u"%s (%s von %d in %d)" % (contact.name, format_halves(contact.numHolidays(date.year)), available, date.year)
+                        else:
+                            text = u"%s (%s in %d)" % (contact.name, format_halves(contact.numHolidays(date.year)), date.year)
                     else:
                         text = contact.name
                     painter.drawText(QRect(x + 10, (15 + 25 + 15) * i + 15, self.columnWidth() * 20 - 10, 25), Qt.AlignVCenter, text)
