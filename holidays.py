@@ -1032,12 +1032,26 @@ class HolidayModel(QObject):
             self.reloadHolidays()
 
 
+class KeyWidget(QWidget):
+    def __init__(self, app):
+        super(KeyWidget, self).__init__()
+        self.app = app
+
+    def sizeHint(self):
+        return QSize(200, 25)
+
+
 class MainWindow(QMainWindow):
     def __init__(self, app):
         super(MainWindow, self).__init__()
         self.app = app
 
-        self.setCentralWidget(CalendarPane(self.app))
+        centralWidget = QWidget()
+        vbox = QVBoxLayout(centralWidget)
+        vbox.addWidget(CalendarPane(self.app))
+        vbox.addWidget(KeyWidget(self.app))
+
+        self.setCentralWidget(centralWidget)
         self.setWindowIcon(self.app.dateIcon)
         self.setWindowTitle("Urlaubsplanung")
 
