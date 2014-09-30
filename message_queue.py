@@ -30,7 +30,7 @@ class MessageQueue(QObject):
         self.thread.daemon = True
         self.thread.start()
 
-    def publish(self, channel, message, extra):
+    def publish(self, channel, message, extra, loopback=False):
         """Publishes a message for other clients."""
         self.queue.put({
             "session": self.session,
@@ -38,6 +38,9 @@ class MessageQueue(QObject):
             "message": message,
             "extra": extra,
         })
+
+        if loopback:
+            self.received.emit(0, self.session, channel, message, extra)
 
     def run(self):
         """
