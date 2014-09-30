@@ -1065,6 +1065,16 @@ class KeyWidget(QWidget):
         x = self.drawKey(painter, x, QBrush(self.app.lightGreen), "Gleitzeit")
         x = self.drawKey(painter, x, QBrush(self.app.yellow), "Sonderurlaub")
 
+        x += 40
+
+        # Feiertage.
+        self.drawRect(painter, x, QBrush(Qt.white))
+        x = self.drawKey(painter, x, QBrush(self.app.lightRed), "Feiertag")
+
+        # Schulferien.
+        self.drawRect(painter, x, QBrush(Qt.white))
+        x = self.drawKey(painter, x, QBrush(self.app.orange, Qt.BDiagPattern), "Schulferien Niedersachsen")
+
         painter.end()
 
     def sizeHint(self):
