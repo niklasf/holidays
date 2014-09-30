@@ -565,7 +565,19 @@ class CalendarBody(CalendarStrip):
                             text = u"%s (%s in %d)" % (contact.name, format_halves(contact.numHolidays(date.year)), date.year)
                     else:
                         text = contact.name
-                    painter.drawText(QRect(x + 10, (15 + 25 + 15) * i + 15, self.columnWidth() * 20 - 10, 25), Qt.AlignVCenter, text)
+
+                    rect = QRect(x + 10, (15 + 25 + 15) * i + 15, self.columnWidth() * 20 - 10, 25)
+
+                    # Draw readability protection.
+                    painter.setPen(QPen(QColor(255, 255, 255, 200)))
+                    painter.drawText(rect.translated(-1, -1), Qt.AlignVCenter, text)
+                    painter.drawText(rect.translated(1, -1), Qt.AlignVCenter, text)
+                    painter.drawText(rect.translated(1, 1), Qt.AlignVCenter, text)
+                    painter.drawText(rect.translated(-1, 1), Qt.AlignVCenter, text)
+
+                    # Draw real text.
+                    painter.setPen(QPen())
+                    painter.drawText(rect, Qt.AlignVCenter, text)
 
         painter.end()
 
