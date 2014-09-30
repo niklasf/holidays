@@ -508,10 +508,14 @@ class CalendarBody(CalendarStrip):
             painter.drawRect(rect)
 
         # Gray out the past.
+        gradient = QLinearGradient(0, 0, 1, 0)
+        gradient.setCoordinateMode(QGradient.ObjectBoundingMode)
+        gradient.setColorAt(0, QColor(212, 208, 200, 0))
+        gradient.setColorAt(1, QColor(212, 208, 200, 188))
         xEnd = self.xFromDate(datetime.date.today())
-        xStart = xEnd - self.width()
-        rect = QRect(xStart, 0, self.width(), self.height())
-        painter.fillRect(rect, QBrush(QColor(212, 208, 200, 200)))
+        xStart = xEnd - 600
+        rect = QRect(xStart, 0, xEnd - xStart, self.height())
+        painter.fillRect(rect, QBrush(gradient))
 
         # Draw names.
         for x, date in self.visibleDays():
