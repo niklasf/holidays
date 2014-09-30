@@ -1037,6 +1037,36 @@ class KeyWidget(QWidget):
         super(KeyWidget, self).__init__()
         self.app = app
 
+    def drawRect(self, painter, x, brush):
+        painter.setBrush(brush)
+        painter.drawRect(x, (self.height() - 15) / 2 - 5, 20, 15)
+        return x + 20 + 8
+
+    def drawLabel(self, painter, x, text):
+        metrics = QFontMetrics(painter.font())
+        width = metrics.width(text)
+        rect = QRect(x, (self.height() - metrics.height()) / 2 - 5, width, metrics.height())
+        painter.drawText(rect, Qt.AlignLeft | Qt.AlignVCenter, text)
+        return x + width + 12
+
+    def drawKey(self, painter, x, brush, text):
+        x = self.drawRect(painter, x, brush)
+        x = self.drawLabel(painter, x, text)
+        return x
+
+    def paintEvent(self, event):
+        painter = QPainter(self)
+
+        # Urlaub.
+        x = self.drawKey(painter, 5, QBrush(self.app.green), "Urlaub")
+        x = self.drawKey(painter, x, QBrush(self.app.purple), "Dienstreise")
+        x = self.drawKey(painter, x, QBrush(self.app.orange), "Krankheit")
+        x = self.drawKey(painter, x, QBrush(self.app.gray), "Planung")
+        x = self.drawKey(painter, x, QBrush(self.app.lightGreen), "Gleitzeit")
+        x = self.drawKey(painter, x, QBrush(self.app.yellow), "Sonderurlaub")
+
+        painter.end()
+
     def sizeHint(self):
         return QSize(200, 25)
 
