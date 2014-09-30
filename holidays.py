@@ -25,6 +25,21 @@ MONTH_NAMES = ["Dezember", "Januar", "Februar", u"März", "April", "Mai", "Juni"
                "Juli", "August", "September", "Oktober", "November", "Dezember"]
 
 
+def format_halves(*args):
+    if len(args) == 1:
+        num_full, num_half = args[0]
+    else:
+        num_full, num_half = args[0], args[1]
+
+    num_full = int(num_full) + int(num_half) // 2
+    if int(num_half) % 2 == 1:
+        if num_full == 0:
+            return u"½"
+        else:
+            return u"%d½" % num_full
+    else:
+        return str(num_full)
+
 def map_pixel(pixmap, mapper):
     image = pixmap.toImage()
 
@@ -529,11 +544,7 @@ class CalendarBody(CalendarStrip):
             if date.day == 1:
                 for i, contact in enumerate(self.app.holidayModel.contactCache.values()):
                     if ownContact and (ownContact.id == contact.id or contact.department in ownContact.writableDepartments()):
-                        numHolidays, plusOneHalf = contact.numHolidays(date.year)
-                        if plusOneHalf:
-                            text = u"%s (%d½ in %d)" % (contact.name, numHolidays, date.year)
-                        else:
-                            text = u"%s (%d in %d)" % (contact.name, numHolidays, date.year)
+                        text = u"%s (%s in %d)" % (contact.name, format_halves(contact.numHolidays(date.year)), date.year)
                     else:
                         text = contact.name
                     painter.drawText(QRect(x + 10, (15 + 25 + 15) * i + 15, self.columnWidth() * 20 - 10, 25), Qt.AlignVCenter, text)
@@ -1247,14 +1258,10 @@ class MainWindow(QMainWindow):
         numDays, plusOneHalf = contact.numHolidays(year)
         if numDays == 0 and not plusOneHalf:
             self.setWindowTitle(u"Urlaubsplaner")
-        elif numDays == 0 and plusOneHalf:
-            self.setWindowTitle(u"½ Tag Urlaub in %d" % year)
-        elif numDays == 1 and not plusOneHalf:
-            self.setWindowTitle(u"1 Tag Urlaub in %d" % year)
-        elif plusOneHalf:
-            self.setWindowTitle(u"%d½ Tage Urlaub in %d" % (numDays, year))
+        elif numDays == 1:
+            self.setWindowTitle(u"%s Tag Urlaub in %d" % (format_halves(numDays, plusOneHalf), year))
         else:
-            self.setWindowTitle(u"%d Tage Urlaub in %d" % (numDays, year))
+            self.setWindowTitle(u"%s Tage Urlaub in %d" % (format_halves(numDays, plusOneHalf), year))
 
     def onAboutAction(self):
         QMessageBox.about(self, self.windowTitle(),
@@ -1307,25 +1314,26 @@ class AnnualHolidaysDialog(QDialog):
     def __init__(self, app, contact, parent=None):
         super(AnnualHolidaysDialog, self).__init__(parent)
         self.app = app
+        self.app.holidayModel.modelReset.connect(self.onHolidayModelReset)
         self.contact = contact
+        self.year = datetime.date.today().year
 
         self.initUi()
         self.initValues()
 
-        self.setWindowTitle("Jahresurlaub")
+        self.setWindowTitle(u"Jahresurlaub / Übertrag")
         self.setWindowFlags(self.windowFlags() & ~Qt.WindowContextHelpButtonHint)
 
     def initUi(self):
         layout = QGridLayout(self)
 
-        year = datetime.date.today().year
-
-        layout.addWidget(QLabel("%d:" % (year - 1)), 1, 0)
-        layout.addWidget(QLabel("0 von"), 1, 1)
+        layout.addWidget(QLabel("%d:" % (self.year - 1)), 1, 0)
+        self.numHolidaysPrevYearBox = QLabel("NaN")
+        layout.addWidget(self.numHolidaysPrevYearBox, 1, 1)
         layout.addWidget(QLabel("von"), 1, 2)
         layout.addWidget(QLabel("unbekannt"), 1, 3)
 
-        layout.addWidget(QLabel("%d:" % year), 2, 0)
+        layout.addWidget(QLabel("%d:" % self.year), 2, 0)
         layout.addWidget(QLabel("0"), 2, 1)
         layout.addWidget(QLabel("von"), 2, 2)
         layout.addWidget(QLabel("unbekannt"), 2, 3)
@@ -1333,10 +1341,13 @@ class AnnualHolidaysDialog(QDialog):
         buttons = QDialogButtonBox(QDialogButtonBox.Save | QDialogButtonBox.Cancel)
         buttons.accepted.connect(self.onAccept)
         buttons.rejected.connect(self.reject)
-        layout.addWidget(buttons, 3, 0, 1, 3)
+        layout.addWidget(buttons, 3, 0, 1, 4)
+
+    def onHolidayModelReset(self):
+        self.numHolidaysPrevYearBox.setText(format_halves(self.contact.numHolidays(self.year - 1)))
 
     def initValues(self):
-        pass
+        self.onHolidayModelReset()
 
     def onAccept(self):
         pass
