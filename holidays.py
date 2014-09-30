@@ -126,7 +126,7 @@ class CalendarStrip(QWidget):
         self._offset = 0.0
 
     def columnWidth(self):
-        return min(self.width() / 30.0, 25.0)
+        return min(self.width() / 45.0, 25.0)
 
     def offset(self):
         return self._offset
@@ -456,7 +456,7 @@ class CalendarBody(CalendarStrip):
         gradient.setColorAt(0, QColor(212, 208, 200, 0))
         gradient.setColorAt(1, QColor(212, 208, 200, 188))
         xEnd = self.xFromDate(datetime.date.today())
-        xStart = xEnd - 600
+        xStart = xEnd - self.columnWidth() * 6
         rect = QRect(xStart, 0, xEnd - xStart, self.height())
         painter.fillRect(rect, QBrush(gradient))
 
@@ -630,8 +630,7 @@ class CalendarPane(QScrollArea):
 
         self.app.holidayModel.modelReset.connect(self.updateWidgetSizes)
 
-        today = datetime.date.today()
-        self.offset = datetime.date(today.year, today.month, 1).toordinal() - EPOCH_ORDINAL
+        self.offset = datetime.date.today().toordinal() - EPOCH_ORDINAL - 7
 
         self.header = CalendarHeader(self)
         self.header.leftClicked.connect(self.onLeftClicked)
@@ -680,7 +679,7 @@ class CalendarPane(QScrollArea):
         self.animationEnabled = False
 
         today = datetime.date.today()
-        self.offset = datetime.date(today.year, today.month, 1).toordinal() - EPOCH_ORDINAL
+        self.offset = today.toordinal() - 7 - EPOCH_ORDINAL
 
         self.animation.setStartValue(self.header.offset())
         self.animation.setEndValue(float(self.offset))
