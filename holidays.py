@@ -1334,7 +1334,8 @@ class AnnualHolidaysDialog(QDialog):
         layout.addWidget(QLabel("unbekannt"), 1, 3)
 
         layout.addWidget(QLabel("%d:" % self.year), 2, 0)
-        layout.addWidget(QLabel("0"), 2, 1)
+        self.numHolidaysBox = QLabel("NaN")
+        layout.addWidget(self.numHolidaysBox, 2, 1)
         layout.addWidget(QLabel("von"), 2, 2)
         layout.addWidget(QLabel("unbekannt"), 2, 3)
 
@@ -1345,6 +1346,7 @@ class AnnualHolidaysDialog(QDialog):
 
     def onHolidayModelReset(self):
         self.numHolidaysPrevYearBox.setText(format_halves(self.contact.numHolidays(self.year - 1)))
+        self.numHolidaysBox.setText(format_halves(self.contact.numHolidays(self.year)))
 
     def initValues(self):
         self.onHolidayModelReset()
