@@ -839,6 +839,7 @@ class Application(QApplication):
         self.holidayModel = HolidayModel(self)
         self.holidayModel.reloadContacts()
         self.holidayModel.reloadHolidays()
+        self.holidayModel.reloadHolidayAnnual()
 
 
 class Contact(object):
@@ -970,6 +971,9 @@ class HolidayModel(QObject):
         self.contactCache = indexed.IndexedOrderedDict()
         self.holidayCache = indexed.IndexedOrderedDict()
 
+        self.holidayAnnualYear = None
+        self.holidayAnnualCache = {}
+
         self.app.messageQueue.received.connect(self.onMessageReceived)
 
     def childDepartments(self, departments):
@@ -1027,6 +1031,22 @@ class HolidayModel(QObject):
         cursor.execute("SELECT contact_id, department, firstname, name, email, login_id FROM contact WHERE department IN (" + ", ".join(str(id) for id in departments) + ") ORDER BY name ASC")
         for record in cursor:
             self.contactCache[record[0]] = self.contactFromRecord(record)
+
+        cursor.close()
+        self.app.db.commit()
+
+        self.modelReset.emit()
+
+    def reloadHolidayAnnual(self):
+        self.holidayAnnualCache.clear()
+        self.holidayAnnualYear = datetime.date.today().year
+
+        cursor = self.app.db.cursor()
+        cursor.execute("SELECT contact_id, available_holidays FROM holiday_annual WHERE year = %(year)s", {
+            "year": self.holidayAnnualYear,
+        })
+        for record in cursor:
+            self.holidayAnnualCache[record[0]] = record[1]
 
         cursor.close()
         self.app.db.commit()
@@ -1116,6 +1136,8 @@ class HolidayModel(QObject):
     def onMessageReceived(self, id, session, channel, message, extra):
         if channel == "holiday":
             self.reloadHolidays()
+        elif channel == "holiday_annual":
+            self.reloadHolidayAnnual()
 
 
 class KeyWidget(QWidget):
@@ -1331,13 +1353,17 @@ class AnnualHolidaysDialog(QDialog):
         self.numHolidaysPrevYearBox = QLabel("NaN")
         layout.addWidget(self.numHolidaysPrevYearBox, 1, 1)
         layout.addWidget(QLabel("von"), 1, 2)
-        layout.addWidget(QLabel("unbekannt"), 1, 3)
+        self.annualPrevBox = QLabel("unbekannt")
+        layout.addWidget(self.annualPrevBox, 1, 3)
 
         layout.addWidget(QLabel("%d:" % self.year), 2, 0)
         self.numHolidaysBox = QLabel("NaN")
         layout.addWidget(self.numHolidaysBox, 2, 1)
         layout.addWidget(QLabel("von"), 2, 2)
-        layout.addWidget(QLabel("unbekannt"), 2, 3)
+        self.annualBox = QSpinBox()
+        self.annualBox.setRange(0, 366)
+        self.annualBox.setValue(30)
+        layout.addWidget(self.annualBox, 2, 3)
 
         buttons = QDialogButtonBox(QDialogButtonBox.Save | QDialogButtonBox.Cancel)
         buttons.accepted.connect(self.onAccept)
@@ -1348,11 +1374,39 @@ class AnnualHolidaysDialog(QDialog):
         self.numHolidaysPrevYearBox.setText(format_halves(self.contact.numHolidays(self.year - 1)))
         self.numHolidaysBox.setText(format_halves(self.contact.numHolidays(self.year)))
 
+        cursor = self.app.db.cursor()
+
+        cursor.execute("SELECT available_holidays FROM holiday_annual WHERE year = %(year)s", {
+            "year": self.year - 1,
+        })
+        record = cursor.fetchone()
+        if not record:
+            self.annualPrevBox.setText("unbekannt")
+        else:
+            self.annualPrevBox.setText(str(record[0]))
+
+        cursor.close()
+        self.app.db.commit()
+
     def initValues(self):
         self.onHolidayModelReset()
 
+        if self.year == self.app.holidayModel.holidayAnnualYear:
+            if self.contact.id in self.app.holidayModel.holidayAnnualCache:
+                self.annualBox.setValue(self.app.holidayModel.holidayAnnualCache[self.contact.id])
+
     def onAccept(self):
-        pass
+        cursor = self.app.db.cursor()
+        cursor.execute("INSERT INTO holiday_annual (contact_id, year, available_holidays) VALUES (%(contact_id)s, %(year)s, %(available_holidays)s) ON DUPLICATE KEY UPDATE available_holidays = %(available_holidays)s", {
+            "contact_id": self.contact.id,
+            "year": self.year,
+            "available_holidays": self.annualBox.value(),
+        })
+        self.app.db.commit()
+        cursor.close()
+
+        self.app.messageQueue.publish("holiday_annual", "update", "*", True)
+        self.accept()
 
 
 class HolidayDialog(QDialog):
