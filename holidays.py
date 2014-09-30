@@ -148,6 +148,9 @@ class CalendarStrip(QWidget):
     def dateFromX(self, x):
         return datetime.date.fromordinal(int(self._offset + EPOCH_ORDINAL + x / self.columnWidth()))
 
+    def xFromDate(self, date):
+        return (date.toordinal() - self._offset - EPOCH_ORDINAL) * self.columnWidth()
+
 
 class CalendarHeader(CalendarStrip):
 
@@ -356,18 +359,6 @@ class HolidayOverlay(object):
         return is_holiday(date)
 
 
-class PastOverlay(object):
-    def __init__(self, app):
-        self.app = app
-        self._brush = QBrush(QColor(212, 208, 200, 200))
-
-    def brush(self):
-        return self._brush
-
-    def matches(self, date):
-        return date < datetime.date.today()
-
-
 class SchoolHolidays(object):
     def __init__(self, app):
         self.app = app
@@ -516,12 +507,11 @@ class CalendarBody(CalendarStrip):
                 painter.setBrush(QBrush(color))
             painter.drawRect(rect)
 
-        # Gray out past.
-        overlay = PastOverlay(self.app)
-        for x, date in self.visibleDays():
-            rect = QRect(x, 0, self.columnWidth(), self.height())
-            if overlay.matches(date):
-                painter.fillRect(rect, overlay.brush())
+        # Gray out the past.
+        xEnd = self.xFromDate(datetime.date.today())
+        xStart = xEnd - self.width()
+        rect = QRect(xStart, 0, self.width(), self.height())
+        painter.fillRect(rect, QBrush(QColor(212, 208, 200, 200)))
 
         # Draw names.
         for x, date in self.visibleDays():
