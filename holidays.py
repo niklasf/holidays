@@ -708,7 +708,7 @@ class CalendarPane(QScrollArea):
         dialog.show()
 
     def onDayClicked(self, offset):
-        self.onDayRangeSelected(offset, offset + 7)
+        self.onDayRangeSelected(offset, offset)
 
     def onCellClicked(self, day, index):
         # Need a contact entry to create holiday entries.
