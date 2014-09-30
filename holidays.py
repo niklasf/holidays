@@ -1122,7 +1122,10 @@ class MainWindow(QMainWindow):
         self.aboutQtAction = QAction(u"Über Qt ...", self)
         self.aboutQtAction.triggered.connect(self.onAboutQtAction)
 
-        self.createHolidayAction = QAction("Eintragen", self)
+        self.annualHolidaysAction = QAction("Jahresurlaub ...", self)
+        self.annualHolidaysAction.triggered.connect(self.onAnnualHolidaysAction)
+
+        self.createHolidayAction = QAction("Eintragen ...", self)
         self.createHolidayAction.setShortcut("Ctrl+N")
         self.createHolidayAction.triggered.connect(self.onCreateHolidayAction)
 
@@ -1235,6 +1238,11 @@ class MainWindow(QMainWindow):
     def onAboutQtAction(self):
         QMessageBox.aboutQt(self, self.windowTitle())
 
+    def onAnnualHolidaysAction(self):
+        contact = self.app.holidayModel.contactFromHandle()
+        dialog = AnnualHolidaysDialog(self.app, contact, self)
+        dialog.show()
+
     def onCreateHolidayAction(self):
         if not self.app.holidayModel.contactFromHandle():
             QMessageBox.warning(self, self.windowTitle(), u"Sie (%s) können keinen Urlaub eintragen, da Sie nicht in der Kontakttabelle verzeichnet sind." % getpass.getuser())
@@ -1259,6 +1267,7 @@ class MainWindow(QMainWindow):
         mainMenu.addAction(self.aboutQtAction)
 
         holidaysMenu = self.menuBar().addMenu("Urlaub")
+        holidaysMenu.addAction(self.annualHolidaysAction)
         holidaysMenu.addAction(self.createHolidayAction)
 
         viewMenu = self.menuBar().addMenu("Ansicht")
@@ -1267,6 +1276,45 @@ class MainWindow(QMainWindow):
 
     def sizeHint(self):
         return QSize(900, 600)
+
+
+class AnnualHolidaysDialog(QDialog):
+    def __init__(self, app, contact, parent=None):
+        super(AnnualHolidaysDialog, self).__init__(parent)
+        self.app = app
+        self.contact = contact
+
+        self.initUi()
+        self.initValues()
+
+        self.setWindowTitle("Jahresurlaub")
+        self.setWindowFlags(self.windowFlags() & ~Qt.WindowContextHelpButtonHint)
+
+    def initUi(self):
+        layout = QGridLayout(self)
+
+        year = datetime.date.today().year
+
+        layout.addWidget(QLabel("%d:" % (year - 1)), 1, 0)
+        layout.addWidget(QLabel("0 von"), 1, 1)
+        layout.addWidget(QLabel("von"), 1, 2)
+        layout.addWidget(QLabel("unbekannt"), 1, 3)
+
+        layout.addWidget(QLabel("%d:" % year), 2, 0)
+        layout.addWidget(QLabel("0"), 2, 1)
+        layout.addWidget(QLabel("von"), 2, 2)
+        layout.addWidget(QLabel("unbekannt"), 2, 3)
+
+        buttons = QDialogButtonBox(QDialogButtonBox.Save | QDialogButtonBox.Cancel)
+        buttons.accepted.connect(self.onAccept)
+        buttons.rejected.connect(self.reject)
+        layout.addWidget(buttons, 3, 0, 1, 3)
+
+    def initValues(self):
+        pass
+
+    def onAccept(self):
+        pass
 
 
 class HolidayDialog(QDialog):
