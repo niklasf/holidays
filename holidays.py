@@ -526,17 +526,31 @@ class CalendarBody(CalendarStrip):
                 color = self.app.yellow
 
             if self.mousePos and rect.contains(self.mousePos):
+                # Use a gradient if hovered.
                 gradient = QRadialGradient(QPointF(0.5, 0.5), 0.5)
                 gradient.setCoordinateMode(QGradient.ObjectBoundingMode)
                 gradient.setColorAt(0, color.lighter(140))
                 if self.mousePressPos:
+                    # Make it darker, if pressed.
                     gradient.setColorAt(1, color.lighter(80))
                 else:
                     gradient.setColorAt(1, color)
                 painter.setBrush(QBrush(gradient))
             else:
                 painter.setBrush(QBrush(color))
-            painter.drawRect(rect)
+
+            # Fill color.
+            painter.fillRect(rect, painter.brush())
+
+            # Draw pseudo 3D frame.
+            if not self.mousePos or not rect.contains(self.mousePos) or not self.mousePressPos:
+                painter.setPen(QPen(QBrush(QColor(255, 255, 255, 200)), 2))
+                painter.drawLine(rect.x(), rect.y(), rect.x() + rect.width(), rect.y())
+                painter.drawLine(rect.x(), rect.y(), rect.x(), rect.y() + rect.height())
+                painter.setPen(QPen(QBrush(QColor(0, 0, 0, 200)), 2))
+                painter.drawLine(rect.x(), rect.y() + rect.height(), rect.x() + rect.width(), rect.y() + rect.height())
+                painter.drawLine(rect.x() + rect.width(), rect.y(), rect.x() + rect.width(), rect.y() + rect.height())
+                painter.setPen(QPen())
 
         # Draw names.
         ownContact = self.app.holidayModel.contactFromHandle()
