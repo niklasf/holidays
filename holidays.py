@@ -851,6 +851,67 @@ class Contact(object):
         self._writableDepartments = self.app.holidayModel.childDepartments(departments)
         return self._writableDepartments
 
+    def numHolidays(self, year):
+        days = set()
+        firstHalfDays = set()
+        secondHalfDays = set()
+
+        for holiday in self.app.holidayModel.holidayCache.values():
+            # Calculate for the current user only.
+            if holiday.contactId != self.id:
+                continue
+
+            # Sum up only real holidays.
+            if holiday.type != TYPE_HOLIDAY:
+                continue
+
+            # Skip holidays completely out of the current year.
+            if holiday.end < datetime.date(year, 1, 1) or holiday.start > datetime.date(year, 12, 31):
+                continue
+
+            day = holiday.start
+            while day <= holiday.end:
+                # Days out of the current year do not count.
+                if day.year != year:
+                    day = day + datetime.timedelta(days=1)
+                    continue
+
+                # National holidays do not count.
+                if is_holiday(day):
+                    day = day + datetime.timedelta(days=1)
+                    continue
+
+                # Heiligabend and Silvester count only half a day.
+                if day in (datetime.date(year, 12, 24), datetime.date(year, 12, 31)):
+                    if day == holiday.start and holiday.startHalfDay:
+                        pass
+                    elif day == holiday.end and holiday.endHalfDay:
+                        pass
+                    else:
+                        secondHalfDays.add(day)
+                    day = day + datetime.timedelta(days=1)
+                    continue
+
+                # Count.
+                if day == holiday.start and holiday.startHalfDay:
+                    secondHalfDays.add(day)
+                elif day == holiday.end and holiday.endHalfDay:
+                    firstHalfDays.add(day)
+                else:
+                    days.add(day)
+
+                day = day + datetime.timedelta(days=1)
+
+        # Complete days cover half days.
+        firstHalfDays.difference_update(days)
+        secondHalfDays.difference_update(days)
+
+        # Calculate sums.
+        numHalfDays = len(firstHalfDays) + len(secondHalfDays)
+        numDays = len(days) + numHalfDays // 2
+
+        return numDays, numHalfDays % 2 == 1
+
 
 TYPE_HOLIDAY = 0
 TYPE_BUSINESS_TRIP = 1
@@ -1171,68 +1232,16 @@ class MainWindow(QMainWindow):
             self.setWindowTitle("Urlaubsplaner")
             return
 
-        # Build a set of holidays taken this year.
+        # Set the window title with the sum of holidays this year.
         year = datetime.date.today().year
-        days = set()
-        firstHalfDays = set()
-        secondHalfDays = set()
-
-        for holiday in self.app.holidayModel.holidayCache.values():
-            # Calculate for the current user only.
-            if holiday.contactId != contact.id:
-                continue
-
-            # Sum up only real holidays.
-            if holiday.type != TYPE_HOLIDAY:
-                continue
-
-            # Sum up only days in the current years.
-            if holiday.end < datetime.date(year, 1, 1) or holiday.start > datetime.date(year, 12, 31):
-                continue
-
-            day = holiday.start
-            while day <= holiday.end:
-                # Days out of the current year do not count.
-                if day.year != year:
-                    day = day + datetime.timedelta(days=1)
-                    continue
-
-                # National holidays do not count.
-                if is_holiday(day):
-                    day = day + datetime.timedelta(days=1)
-                    continue
-
-                # Heiligabend and Silvester count only half a day.
-                if day in (datetime.date(year, 12, 24), datetime.date(year, 12, 31)):
-                    if day == holiday.start and holiday.startHalfDay:
-                        pass
-                    elif day == holiday.end and holiday.endHalfDay:
-                        pass
-                    else:
-                        secondHalfDays.add(day)
-                    day = day + datetime.timedelta(days=1)
-                    continue
-
-                # Count.
-                if day == holiday.start and holiday.startHalfDay:
-                    secondHalfDays.add(day)
-                elif day == holiday.end and holiday.endHalfDay:
-                    firstHalfDays.add(day)
-                else:
-                    days.add(day)
-
-                day = day + datetime.timedelta(days=1)
-
-        # Set the window title with the sum.
-        numHalfDays = len(firstHalfDays.difference(days)) + len(secondHalfDays.difference(days))
-        numDays = len(days) + numHalfDays // 2
-        if numDays == 0 and numHalfDays == 0:
+        numDays, plusOneHalf = contact.numHolidays(year)
+        if numDays == 0 and not plusOneHalf:
             self.setWindowTitle(u"Urlaubsplaner")
-        elif numDays == 0 and numHalfDays == 1:
+        elif numDays == 0 and plusOneHalf:
             self.setWindowTitle(u"½ Tag Urlaub in %d" % year)
-        elif numDays == 1 and numHalfDays == 0:
+        elif numDays == 1 and not plusOneHalf:
             self.setWindowTitle(u"1 Tag Urlaub in %d" % year)
-        elif numHalfDays % 2 == 1:
+        elif plusOneHalf:
             self.setWindowTitle(u"%d½ Tage Urlaub in %d" % (numDays, year))
         else:
             self.setWindowTitle(u"%d Tage Urlaub in %d" % (numDays, year))
