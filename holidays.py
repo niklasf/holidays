@@ -1285,10 +1285,15 @@ class MainWindow(QMainWindow):
         numDays, plusOneHalf = contact.numHolidays(year)
         if numDays == 0 and not plusOneHalf:
             self.setWindowTitle(u"Urlaubsplaner")
-        elif numDays == 1:
-            self.setWindowTitle(u"%s Tag Urlaub in %d" % (format_halves(numDays, plusOneHalf), year))
+
+        if year == self.app.holidayModel.holidayAnnualYear and contact.id in self.app.holidayModel.holidayAnnualCache:
+            available = self.app.holidayModel.holidayAnnualCache[contact.id]
+            self.setWindowTitle(u"%s von %d Tagen Urlaub in %d" % (format_halves(numDays, plusOneHalf), available, year))
         else:
-            self.setWindowTitle(u"%s Tage Urlaub in %d" % (format_halves(numDays, plusOneHalf), year))
+            if numDays == 1:
+                self.setWindowTitle(u"%s Tag Urlaub in %d" % (format_halves(numDays, plusOneHalf), year))
+            else:
+                self.setWindowTitle(u"%s Tage Urlaub in %d" % (format_halves(numDays, plusOneHalf), year))
 
     def onAboutAction(self):
         QMessageBox.about(self, self.windowTitle(),
